@@ -70,6 +70,13 @@
   .tqbar .lim{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--muted);left:50%}
   .tqrow .val{font-family:"IBM Plex Mono",monospace;text-align:right}
   .hint{font-size:12px;color:var(--muted);margin:8px 0 0}
+  .vt{width:100%;border-collapse:collapse;font-size:11.5px;font-family:"IBM Plex Mono",monospace}
+  .vt th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500}
+  .vt td,.vt th{padding:3px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  .vt td:first-child,.vt th:first-child{text-align:left}
+  .vt .ok{color:var(--accent-ink)}
+  .vt .warn{color:var(--warn);font-weight:600}
+  .vsum{font-size:12.5px;margin:8px 0 0;font-weight:600}
   #dial{display:block;margin:0 auto;color:var(--ink);cursor:pointer;touch-action:none}
   .footer-note{grid-column:1/-1;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
 </style>
@@ -137,6 +144,13 @@
       <h2>Chirps <span class="sub">assets/chirps.json — piezo synth</span></h2>
       <div class="row" id="chirpBtns"></div>
       <p class="hint">Square-wave PWM synthesis, same parameters the real piezo driver will use. Click any button (browser audio needs a first click).</p>
+    </div>
+
+    <div class="box">
+      <h2>Validation <span class="sub">every emote vs servo physics</span></h2>
+      <div id="valTable"></div>
+      <p class="vsum" id="valSummary"></p>
+      <p class="hint">Headless sweep at 120 Hz through the same spring engine: peak joint speed vs the ST3215's ~270°/s no-load @12 V (flagged above 70%), peak gravity torque at the shoulder vs 15 kg·cm sustained-safe (30 stall), and joint-limit grazes. Re-runs automatically — edit an emote in <span class="mono">assets/emotes.json</span> and rebuild to re-validate.</p>
     </div>
 
     <div class="box">
@@ -310,8 +324,9 @@ function updatePose(now, dt){
 }
 
 // ---------- geometry & torque ----------
-function forwardKin(){
-  const r2 = cur.j2*D2R, r23 = (cur.j2+cur.j3)*D2R, rh = (cur.j2+cur.j3+cur.j4)*D2R;
+function forwardKin(){ return forwardKinOf(cur); }
+function forwardKinOf(pose){
+  const r2 = pose.j2*D2R, r23 = (pose.j2+pose.j3)*D2R, rh = (pose.j2+pose.j3+pose.j4)*D2R;
   const elbow = {x: L1*Math.cos(r2), y: L1*Math.sin(r2)};
   const wrist = {x: elbow.x + L2*Math.cos(r23), y: elbow.y + L2*Math.sin(r23)};
   const dir = {x: Math.cos(rh), y: Math.sin(rh)};
@@ -367,10 +382,22 @@ function renderScene(k, proj, fb){
     const lp = {x:px(k.lens.x), y:py(k.lens.y)};
     if(proj.surface==="ground"){
       const x0 = px(proj.x - proj.spread), x1 = px(proj.x + proj.spread), gy = py(GROUND);
+      // the projected image itself, drawn as light on the desk (foreshortened cheat)
+      const G2 = fb.length, pw = (x1-x0);
+      const ph = Math.min(30, pw*0.34);
+      let pix = "";
+      for(let r=0;r<G2;r++) for(let c=0;c<G2;c++){
+        const v = fb[r][c];
+        if(v>0){
+          const cx = x0 + (c+0.1)*pw/G2, cy = gy - 2 - ph*((G2-1-r)+0.1)/G2;
+          pix += `<rect x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" width="${(pw/G2*0.8).toFixed(1)}" height="${(ph/G2*0.8).toFixed(1)}" fill="var(--accent)" opacity="${(v>=0.9?0.85:0.3).toFixed(2)}"/>`;
+        }
+      }
       projSvg = `
         <polygon points="${lp.x},${lp.y} ${x0},${gy} ${x1},${gy}" fill="var(--accent)" opacity=".10"/>
         <line x1="${lp.x}" y1="${lp.y}" x2="${x0}" y2="${gy}" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="5 4" opacity=".65"/>
         <line x1="${lp.x}" y1="${lp.y}" x2="${x1}" y2="${gy}" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="5 4" opacity=".65"/>
+        ${pix}
         <line x1="${x0}" y1="${gy}" x2="${x1}" y2="${gy}" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" opacity=".9"/>
         <text x="${(x0+x1)/2}" y="${gy+16}" font-size="10.5" fill="currentColor" opacity=".55" text-anchor="middle" font-family="IBM Plex Mono,monospace">${Math.round(proj.dist)} mm</text>`;
     } else {
@@ -692,6 +719,51 @@ function syncSliders(){
   }
 }
 
+// ---------- validation: sweep every emote through the physics ----------
+const JOINTS = ["j1","j2","j3","j4","j5"];
+function simulateEmote(name){
+  const def = EMOTES[name];
+  const pose = {...NEUTRAL, j1:0};
+  const v = {j1:0,j2:0,j3:0,j4:0,j5:0};
+  const tracks = {};
+  for(const j in def.tracks) tracks[j] = [[0, j==="j1" ? 0 : NEUTRAL[j]], ...def.tracks[j]];
+  const dur = def.duration + 0.7, dt = 1/120;
+  const K = 170, C = 2*Math.sqrt(K)*0.62;
+  let maxV = 0, maxVj = "", maxT2 = 0, maxT3 = 0, lim = false;
+  for(let t = 0; t < dur; t += dt){
+    for(const j of JOINTS){
+      let goal = tracks[j] ? evalTrack(tracks[j], Math.min(t, def.duration))
+                           : (j==="j1" ? 0 : NEUTRAL[j]);
+      if(j!=="j1") goal = clamp(goal, LIMITS[j][0], LIMITS[j][1]);
+      v[j] += (K*(goal - pose[j]) - C*v[j])*dt;
+      pose[j] += v[j]*dt;
+      if(Math.abs(v[j]) > maxV){ maxV = Math.abs(v[j]); maxVj = j; }
+      if(j!=="j1" && (pose[j] < LIMITS[j][0]-2.5 || pose[j] > LIMITS[j][1]+2.5)) lim = true;
+    }
+    const tq = torques(forwardKinOf(pose));
+    maxT2 = Math.max(maxT2, tq.tq2); maxT3 = Math.max(maxT3, tq.tq3);
+  }
+  return {name, maxV, maxVj, maxT2, maxT3, lim};
+}
+function validateAll(){
+  const SPEC = 270, rows = Object.keys(EMOTES).map(simulateEmote);
+  let issues = 0;
+  const tr = rows.map(r => {
+    const flags = [];
+    if(r.lim) flags.push("limit");
+    if(r.maxV > SPEC*0.7) flags.push("fast");
+    if(r.maxT2 > 15) flags.push("torque");
+    if(flags.length) issues++;
+    const verdict = flags.length ? `<span class="warn">${flags.join("+")}</span>` : `<span class="ok">ok</span>`;
+    return `<tr><td>${r.name.replace(/_/g," ")}</td><td>${Math.round(r.maxV)}°/s <span style="opacity:.55">${r.maxVj}</span></td><td>${r.maxT2.toFixed(1)} kg·cm</td><td>${verdict}</td></tr>`;
+  }).join("");
+  document.getElementById("valTable").innerHTML =
+    `<table class="vt"><thead><tr><th>emote</th><th>peak speed</th><th>peak shoulder</th><th>verdict</th></tr></thead><tbody>${tr}</tbody></table>`;
+  document.getElementById("valSummary").innerHTML = issues === 0
+    ? `<span class="ok" style="color:var(--accent-ink)">✓ ${rows.length}/${rows.length} emotes inside the servo envelope</span>`
+    : `<span class="warn" style="color:var(--warn)">⚠ ${issues} emote(s) need attention</span>`;
+}
+
 // ---------- being alive: cursor gaze, petting, idle life ----------
 function sceneToMM(ev){
   const r = scene.getBoundingClientRect();
@@ -700,7 +772,20 @@ function sceneToMM(ev){
   return {x:(sx-OX)/SC, y:(OY-sy)/SC};
 }
 function isAsleep(){ return holdPose && holdPose.j2 !== undefined && holdPose.j2 < 60; }
-scene.addEventListener("pointermove", ev => { gazeTarget = sceneToMM(ev); });
+let lastNoticeAt = -99;
+scene.addEventListener("pointermove", ev => {
+  gazeTarget = sceneToMM(ev);
+  const now = performance.now()/1000;
+  if(now - lastInteract > 3) lastInteract = now;   // presence keeps it awake
+});
+scene.addEventListener("pointerenter", () => {
+  const now = performance.now()/1000;
+  if(now - lastNoticeAt > 20 && !active && !holdPose && !perfTimers.length){
+    lastNoticeAt = now;
+    startEmote({duration:0.7, tracks:{j2:[[0.28,74],[0.7,70]], j4:[[0.28,-67],[0.7,-75]]}}, "_notice");
+    playChirp("ack");
+  }
+});
 scene.addEventListener("pointerleave", () => { gazeTarget = null; });
 scene.addEventListener("pointerdown", ev => {
   const p = sceneToMM(ev);
@@ -756,6 +841,7 @@ function loop(){
   syncSliders();
   requestAnimationFrame(loop);
 }
+validateAll();
 requestAnimationFrame(loop);
 })();
 </script>
