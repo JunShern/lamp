@@ -169,6 +169,7 @@ const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 // ---------- state ----------
 let cur = {...NEUTRAL};           // displayed pose (j1 = offset from baseYaw)
 cur.j1 = 0;
+let vel = {j1:0, j2:0, j3:0, j4:0, j5:0};   // spring velocities (deg/s)
 let baseYaw = 0, baseYawTarget = 0;
 let active = null;                // running emote instance
 let holdPose = null;              // {joint: value} kept after a hold emote
@@ -176,6 +177,20 @@ let manual = {};                  // puppet overrides
 let muted = false;
 let grid = 16;
 let perfTimers = [];
+let lastK = null;                 // last forward kinematics
+let gazeTarget = null;            // {x,y} mm the lamp is watching (cursor)
+let gazePitch = 0;
+let lastInteract = performance.now()/1000;
+let nextIdleAt = performance.now()/1000 + 8;
+let nextBlinkAt = performance.now()/1000 + 3;
+let blinkUntil = 0;
+let displaySetAt = 0;
+const BLINK_HAPPY = [
+  "................","................","................","................",
+  "..####....####..","................","................","................",
+  "................",".##..........##.",".###........###.","..###......###..",
+  "...##########...",".....######.....","................","................"
+];
 
 // ---------- helpers ----------
 const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
@@ -196,6 +211,7 @@ function evalTrack(keys, t){
 function trigger(name, opts){
   const def = EMOTES[name];
   if(!def) return;
+  lastInteract = performance.now()/1000;
   startEmote(def, name);
   if(def.chirp) playChirp(def.chirp);
   if(def.glyph) setDisplayFromTag(def.glyph);
@@ -261,16 +277,35 @@ function updatePose(now, dt){
     j4: 0.9*Math.sin(2*Math.PI*bt/(asleep?6.5:4.8) + 1.2)*bAmp,
     j5: 0.6*Math.sin(2*Math.PI*bt/7)*bAmp
   };
-  // integrate
+  // cursor gaze (only while otherwise idle — an emote owns the head)
+  let gazeGoal = 0;
+  if(gazeTarget && !active && !holdPose && lastK){
+    const dx = gazeTarget.x - lastK.lens.x, dy = gazeTarget.y - lastK.lens.y;
+    if(dx*dx + dy*dy > 900){
+      const want = Math.atan2(dy, dx)/D2R;
+      let diff = want - lastK.rh/D2R;
+      while(diff > 180) diff -= 360;
+      while(diff < -180) diff += 360;
+      gazeGoal = clamp(diff*0.5, -20, 20);
+    }
+  }
+  gazePitch += (gazeGoal - gazePitch)*Math.min(1, dt*5);
+
+  // integrate: under-damped springs give overshoot + settle (follow-through)
   baseYaw += (baseYawTarget - baseYaw)*Math.min(1, dt*6);
+  const K = 170, ZETA = 0.62, C = 2*Math.sqrt(K)*ZETA;
   for(const j of ["j1","j2","j3","j4","j5"]){
-    let v;
-    if(j in emoteJoints) v = emoteJoints[j];
-    else v = cur[j] + (target[j] - cur[j])*Math.min(1, dt*8);
-    if(breath[j] !== undefined && !(j in manual)) v += breath[j];
-    if(j==="j1") v = clamp(v, LIMITS.j1[0]-baseYaw, LIMITS.j1[1]-baseYaw);
-    else v = clamp(v, LIMITS[j][0], LIMITS[j][1]);
-    cur[j] = v;
+    let goal;
+    if(j in emoteJoints) goal = emoteJoints[j];
+    else goal = target[j];
+    if(breath[j] !== undefined && !(j in manual)) goal += breath[j];
+    if(j === "j4") goal += gazePitch;
+    if(j==="j1") goal = clamp(goal, LIMITS.j1[0]-baseYaw, LIMITS.j1[1]-baseYaw);
+    else goal = clamp(goal, LIMITS[j][0], LIMITS[j][1]);
+    vel[j] += (K*(goal - cur[j]) - C*vel[j])*dt;
+    vel[j] = clamp(vel[j], -900, 900);
+    cur[j] += vel[j]*dt;
+    if(j!=="j1") cur[j] = clamp(cur[j], LIMITS[j][0]-4, LIMITS[j][1]+4);
   }
 }
 
@@ -316,14 +351,15 @@ function projection(k){
 
 // ---------- scene rendering ----------
 const scene = document.getElementById("scene");
-function renderScene(k, proj){
+const ACCENT_EDGE = "#c07f22";
+function renderScene(k, proj, fb){
   const yawSquash = Math.cos(baseYaw*D2R*0.6); // slight foreshortening when turned
+  const perp = {x:-k.dir.y, y:k.dir.x};
   const headPoly = (()=>{
-    const perp = {x:-k.dir.y, y:k.dir.x};
     const w = k.wrist, l = k.lens;
     const p = (pt)=>px(pt.x)+","+py(pt.y);
-    const a1={x:w.x+perp.x*12,y:w.y+perp.y*12}, a2={x:w.x-perp.x*12,y:w.y-perp.y*12};
-    const b1={x:l.x+perp.x*30,y:l.y+perp.y*30}, b2={x:l.x-perp.x*30,y:l.y-perp.y*30};
+    const a1={x:w.x+perp.x*13,y:w.y+perp.y*13}, a2={x:w.x-perp.x*13,y:w.y-perp.y*13};
+    const b1={x:l.x+perp.x*32,y:l.y+perp.y*32}, b2={x:l.x-perp.x*32,y:l.y-perp.y*32};
     return p(a1)+" "+p(a2)+" "+p(b2)+" "+p(b1);
   })();
   let projSvg = "";
@@ -332,35 +368,60 @@ function renderScene(k, proj){
     if(proj.surface==="ground"){
       const x0 = px(proj.x - proj.spread), x1 = px(proj.x + proj.spread), gy = py(GROUND);
       projSvg = `
-        <line x1="${lp.x}" y1="${lp.y}" x2="${x0}" y2="${gy}" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="5 4" opacity=".8"/>
-        <line x1="${lp.x}" y1="${lp.y}" x2="${x1}" y2="${gy}" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="5 4" opacity=".8"/>
-        <line x1="${x0}" y1="${gy}" x2="${x1}" y2="${gy}" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
-        <text x="${(x0+x1)/2}" y="${gy+16}" font-size="10.5" fill="currentColor" opacity=".6" text-anchor="middle" font-family="IBM Plex Mono,monospace">${Math.round(proj.dist)} mm</text>`;
+        <polygon points="${lp.x},${lp.y} ${x0},${gy} ${x1},${gy}" fill="var(--accent)" opacity=".10"/>
+        <line x1="${lp.x}" y1="${lp.y}" x2="${x0}" y2="${gy}" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="5 4" opacity=".65"/>
+        <line x1="${lp.x}" y1="${lp.y}" x2="${x1}" y2="${gy}" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="5 4" opacity=".65"/>
+        <line x1="${x0}" y1="${gy}" x2="${x1}" y2="${gy}" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" opacity=".9"/>
+        <text x="${(x0+x1)/2}" y="${gy+16}" font-size="10.5" fill="currentColor" opacity=".55" text-anchor="middle" font-family="IBM Plex Mono,monospace">${Math.round(proj.dist)} mm</text>`;
     } else {
       const y0 = py(proj.y - proj.spread), y1 = py(proj.y + proj.spread), wx = px(WALL_X);
       projSvg = `
-        <line x1="${lp.x}" y1="${lp.y}" x2="${wx}" y2="${y0}" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="5 4" opacity=".8"/>
-        <line x1="${lp.x}" y1="${lp.y}" x2="${wx}" y2="${y1}" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="5 4" opacity=".8"/>
-        <line x1="${wx}" y1="${y0}" x2="${wx}" y2="${y1}" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
-        <text x="${wx-10}" y="${(y0+y1)/2}" font-size="10.5" fill="currentColor" opacity=".6" text-anchor="end" font-family="IBM Plex Mono,monospace">${Math.round(proj.dist)} mm</text>`;
+        <polygon points="${lp.x},${lp.y} ${wx},${y0} ${wx},${y1}" fill="var(--accent)" opacity=".10"/>
+        <line x1="${lp.x}" y1="${lp.y}" x2="${wx}" y2="${y0}" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="5 4" opacity=".65"/>
+        <line x1="${lp.x}" y1="${lp.y}" x2="${wx}" y2="${y1}" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="5 4" opacity=".65"/>
+        <line x1="${wx}" y1="${y0}" x2="${wx}" y2="${y1}" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" opacity=".9"/>
+        <text x="${wx-10}" y="${(y0+y1)/2}" font-size="10.5" fill="currentColor" opacity=".55" text-anchor="end" font-family="IBM Plex Mono,monospace">${Math.round(proj.dist)} mm</text>`;
     }
   }
-  const rollTilt = cur.j5;
+  // the lamp's face: live framebuffer drawn on the shade opening (cartoon cheat)
+  const G = fb.length;
+  const fs = 41/G;
+  const fx = px(k.lens.x - k.dir.x*6), fy = py(k.lens.y - k.dir.y*6);
+  const faceRot = -((cur.j2+cur.j3+cur.j4))*0.18 + cur.j5*0.5;
+  let facePix = "";
+  for(let r=0;r<G;r++) for(let c=0;c<G;c++){
+    const v = fb[r][c];
+    if(v>0) facePix += `<rect x="${((c-G/2)*fs).toFixed(1)}" y="${((r-G/2)*fs).toFixed(1)}" width="${(fs*0.82).toFixed(1)}" height="${(fs*0.82).toFixed(1)}" rx="0.6" fill="#f2a33c" opacity="${v>=0.9?1:0.35}"/>`;
+  }
+  const joint = (p)=>`<circle cx="${px(p.x)}" cy="${py(p.y)}" r="10" fill="var(--accent)" stroke="${ACCENT_EDGE}" stroke-width="2"/>`;
+  const arm = (a,b)=>`
+    <line x1="${px(a.x)}" y1="${py(a.y)}" x2="${px(b.x)}" y2="${py(b.y)}" stroke="${ACCENT_EDGE}" stroke-width="15" stroke-linecap="round" opacity=".5"/>
+    <line x1="${px(a.x)}" y1="${py(a.y)}" x2="${px(b.x)}" y2="${py(b.y)}" stroke="var(--shell)" stroke-width="11" stroke-linecap="round"/>`;
+  const recP = {x:k.wrist.x+(k.lens.x-k.wrist.x)*0.8+perp.x*24, y:k.wrist.y+(k.lens.y-k.wrist.y)*0.8+perp.y*24};
   scene.innerHTML = `
     <line x1="20" y1="${py(GROUND)}" x2="740" y2="${py(GROUND)}" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
     <line x1="${px(WALL_X)}" y1="${py(GROUND)}" x2="${px(WALL_X)}" y2="40" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
     <text x="${px(WALL_X)+8}" y="60" font-size="11" fill="currentColor" opacity=".5">wall</text>
     <text x="700" y="${py(GROUND)+16}" font-size="11" fill="currentColor" opacity=".5" text-anchor="end">desk</text>
-    <rect x="${px(-90*yawSquash)}" y="${py(-40)}" width="${SC*180*yawSquash}" height="${SC*60}" rx="8" fill="var(--shell)" stroke="currentColor" stroke-width="1.5" opacity=".92"/>
-    <line x1="${px(0)}" y1="${py(-40)}" x2="${px(0)}" y2="${py(0)}" stroke="currentColor" stroke-width="8" stroke-linecap="round" opacity=".85"/>
     ${projSvg}
-    <line x1="${px(0)}" y1="${py(0)}" x2="${px(k.elbow.x)}" y2="${py(k.elbow.y)}" stroke="currentColor" stroke-width="10" stroke-linecap="round" opacity=".9"/>
-    <line x1="${px(k.elbow.x)}" y1="${py(k.elbow.y)}" x2="${px(k.wrist.x)}" y2="${py(k.wrist.y)}" stroke="currentColor" stroke-width="10" stroke-linecap="round" opacity=".9"/>
-    <polygon points="${headPoly}" fill="var(--shell)" stroke="currentColor" stroke-width="1.5" opacity=".95" transform="rotate(${rollTilt*0.25} ${px(k.wrist.x)} ${py(k.wrist.y)})"/>
-    <circle cx="${px(k.lens.x)}" cy="${py(k.lens.y)}" r="7" fill="var(--accent)"/>
-    <circle cx="${px(0)}" cy="${py(0)}" r="7.5" fill="var(--bg)" stroke="var(--accent)" stroke-width="3"/>
-    <circle cx="${px(k.elbow.x)}" cy="${py(k.elbow.y)}" r="7.5" fill="var(--bg)" stroke="var(--accent)" stroke-width="3"/>
-    <circle cx="${px(k.wrist.x)}" cy="${py(k.wrist.y)}" r="7.5" fill="var(--bg)" stroke="var(--accent)" stroke-width="3"/>
+    <rect x="${px(-90*yawSquash)}" y="${py(-40)}" width="${SC*180*yawSquash}" height="${SC*60}" rx="10" fill="var(--shell)" stroke="${ACCENT_EDGE}" stroke-width="1.5"/>
+    <line x1="${px(-86*yawSquash)}" y1="${py(-32)}" x2="${px(86*yawSquash)}" y2="${py(-32)}" stroke="var(--accent)" stroke-width="2.5" opacity=".9"/>
+    <rect x="${px(-30)}" y="${py(-4)}" width="${SC*60}" height="${SC*10}" rx="4" fill="var(--accent)" stroke="${ACCENT_EDGE}" stroke-width="1.5"/>
+    <line x1="${px(0)}" y1="${py(-4)}" x2="${px(0)}" y2="${py(0)}" stroke="var(--shell)" stroke-width="9" stroke-linecap="round"/>
+    ${arm({x:0,y:0}, k.elbow)}
+    ${arm(k.elbow, k.wrist)}
+    <g transform="rotate(${cur.j5*0.25} ${px(k.wrist.x)} ${py(k.wrist.y)})">
+      <polygon points="${headPoly}" fill="var(--shell)" stroke="${ACCENT_EDGE}" stroke-width="1.6"/>
+      <line x1="${px(k.lens.x+perp.x*32)}" y1="${py(k.lens.y+perp.y*32)}" x2="${px(k.lens.x-perp.x*32)}" y2="${py(k.lens.y-perp.y*32)}" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="${px(recP.x)}" cy="${py(recP.y)}" r="2.6" fill="var(--warn)"/>
+    </g>
+    <g transform="translate(${fx} ${fy}) rotate(${faceRot.toFixed(1)})">
+      <rect x="${-G*fs/2-3}" y="${-G*fs/2-3}" width="${G*fs+6}" height="${G*fs+6}" rx="6" fill="#141110" stroke="${ACCENT_EDGE}" stroke-width="1.4"/>
+      ${facePix}
+    </g>
+    ${joint({x:0,y:0})}
+    ${joint(k.elbow)}
+    ${joint(k.wrist)}
   `;
 }
 
@@ -409,7 +470,8 @@ function frameForDisplay(now){
   const fb = Array.from({length:G}, ()=>new Array(G).fill(0));
   const off = (G-16)>>1;
   if(display.kind==="glyph"){
-    const g = GLYPHS[display.name];
+    let g = GLYPHS[display.name];
+    if(display.name==="happy" && now < blinkUntil) g = BLINK_HAPPY;
     if(g) for(let r=0;r<16;r++) for(let c=0;c<16;c++){
       const ch=g[r][c];
       if(ch==="#") fb[r+off][c+off]=1; else if(ch==="o") fb[r+off][c+off]=0.35;
@@ -444,14 +506,13 @@ function frameForDisplay(now){
   }
   return fb;
 }
-function renderMatrix(now){
+function renderMatrix(fb){
   const G = grid;
   const cell = Math.floor(334/G), gap = Math.max(1, Math.floor(cell*0.12));
   const size = G*cell + 2;
   if(mcanvas.width !== size){ mcanvas.width = size; mcanvas.height = size; }
   mctx.fillStyle = "#141110";
   mctx.fillRect(0,0,size,size);
-  const fb = frameForDisplay(now);
   for(let r=0;r<G;r++) for(let c=0;c<G;c++){
     const v = fb[r][c];
     const x = 1+c*cell, y = 1+r*cell, s = cell-gap;
@@ -471,6 +532,7 @@ function renderMatrix(now){
 function setDisplayFromTag(tag){
   if(tag.startsWith("@")) { display={kind:"anim", name:tag.slice(1)}; animT0=performance.now()/1000; }
   else { display={kind:"glyph", name:tag}; }
+  displaySetAt = performance.now()/1000;
   refreshGlyphButtons();
 }
 
@@ -523,11 +585,14 @@ const PERFORMANCES = {
 };
 function runPerformance(name){
   stopPerformance();
+  let endT = 0;
   for(const step of PERFORMANCES[name]){
+    endT = Math.max(endT, step.t);
     perfTimers.push(setTimeout(()=>{
       trigger(step.emote, {glyph: step.glyph});
     }, step.t*1000));
   }
+  perfTimers.push(setTimeout(()=>{ perfTimers = []; }, (endT + 3)*1000));
 }
 function stopPerformance(){ perfTimers.forEach(clearTimeout); perfTimers = []; }
 
@@ -627,16 +692,66 @@ function syncSliders(){
   }
 }
 
+// ---------- being alive: cursor gaze, petting, idle life ----------
+function sceneToMM(ev){
+  const r = scene.getBoundingClientRect();
+  const sx = (ev.clientX - r.left)*760/r.width;
+  const sy = (ev.clientY - r.top)*430/r.height;
+  return {x:(sx-OX)/SC, y:(OY-sy)/SC};
+}
+function isAsleep(){ return holdPose && holdPose.j2 !== undefined && holdPose.j2 < 60; }
+scene.addEventListener("pointermove", ev => { gazeTarget = sceneToMM(ev); });
+scene.addEventListener("pointerleave", () => { gazeTarget = null; });
+scene.addEventListener("pointerdown", ev => {
+  const p = sceneToMM(ev);
+  lastInteract = performance.now()/1000;
+  stopPerformance();
+  if(isAsleep()){ trigger("wake_stretch"); return; }
+  if(!lastK) return;
+  // head hit test: distance to wrist->lens segment
+  const w = lastK.wrist, l = lastK.lens;
+  const dx = l.x-w.x, dy = l.y-w.y, len2 = dx*dx+dy*dy;
+  const t = clamp(((p.x-w.x)*dx + (p.y-w.y)*dy)/len2, 0, 1);
+  const cx = w.x+t*dx, cy = w.y+t*dy;
+  const dHead = Math.hypot(p.x-cx, p.y-cy);
+  const dBase = (p.y < -20 && Math.abs(p.x) < 110) ? 0 : 99;
+  if(dHead < 55){ trigger("happy_wiggle"); }          // pet the head
+  else if(dBase < 10){ trigger("alert_perk"); setTimeout(()=>{ if(!active) releaseToNeutral(); }, 900); } // boop the base
+});
+function idleLife(now){
+  if(active || Object.keys(manual).length || perfTimers.length) return;
+  // fall asleep when ignored
+  if(!isAsleep() && now - lastInteract > 95){ startEmote(EMOTES.sleep, "sleep"); setDisplayFromTag("sleepy"); if(!muted) playChirp("snore"); return; }
+  if(isAsleep()) return;
+  if(now < nextIdleAt || holdPose) return;
+  nextIdleAt = now + 7 + Math.random()*9;
+  const r = Math.random();
+  if(r < 0.45){                       // glance around
+    const ang = (Math.random()*2-1)*28;
+    startEmote({duration:1.6, tracks:{j1:[[0.5,ang],[1.6,ang*0.3]]}}, "_glance");
+  } else if(r < 0.7){                 // little roll stretch
+    startEmote({duration:1.4, tracks:{j5:[[0.4,(Math.random()<0.5?1:-1)*14],[1.4,0]]}}, "_stretchlet");
+  } else {                            // curious dip
+    startEmote({duration:1.5, tracks:{j4:[[0.45,NEUTRAL.j4+10],[1.5,NEUTRAL.j4]]}}, "_dip");
+  }
+}
 // ---------- main loop ----------
 let last = performance.now()/1000;
 function loop(){
   const now = performance.now()/1000;
   const dt = Math.min(0.05, now-last); last = now;
+  if(!reduced) idleLife(now);
+  // blink scheduling + face restore
+  if(now > nextBlinkAt){ blinkUntil = now + 0.13; nextBlinkAt = now + 2.5 + Math.random()*4; }
+  if(display.kind==="glyph" && display.name!=="happy" && !active && !perfTimers.length &&
+     !isAsleep() && now - displaySetAt > 7){ setDisplayFromTag("happy"); }
   updatePose(now, dt);
   const k = forwardKin();
-  renderScene(k, projection(k));
+  lastK = k;
+  const fb = frameForDisplay(now);
+  renderScene(k, projection(k), fb);
   renderTorque(torques(k));
-  renderMatrix(now);
+  renderMatrix(fb);
   renderDial();
   syncSliders();
   requestAnimationFrame(loop);
