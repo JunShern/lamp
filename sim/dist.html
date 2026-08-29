@@ -1,0 +1,646 @@
+<title>Robolamp Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#191511; --panel:#221d17; --panel-2:#2a241c; --ink:#ece3d3; --muted:#a2937e;
+    --line:#3a3226; --accent:#f2a33c; --accent-ink:#f2a33c; --warn:#e06c4f;
+    --surface-dark:#141110; --shell:#f7e6cb;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#faf6ee; --panel:#ffffff; --panel-2:#f3ecdf; --ink:#2b2418; --muted:#7c6f5c;
+      --line:#e2d8c4; --accent:#f2a33c; --accent-ink:#9c5f00; --warn:#b6432a;
+      --surface-dark:#1c1814; --shell:#f7e6cb;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#faf6ee; --panel:#ffffff; --panel-2:#f3ecdf; --ink:#2b2418; --muted:#7c6f5c;
+    --line:#e2d8c4; --accent:#f2a33c; --accent-ink:#9c5f00; --warn:#b6432a;
+    --surface-dark:#1c1814; --shell:#f7e6cb;
+  }
+  :root[data-theme="dark"]{
+    --bg:#191511; --panel:#221d17; --panel-2:#2a241c; --ink:#ece3d3; --muted:#a2937e;
+    --line:#3a3226; --accent:#f2a33c; --accent-ink:#f2a33c; --warn:#e06c4f;
+    --surface-dark:#141110; --shell:#f7e6cb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Instrument Sans",system-ui,sans-serif;font-size:15px;line-height:1.5}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+  header{border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+  header .wrap{display:flex;align-items:center;gap:14px;padding:10px 20px;flex-wrap:wrap}
+  .brand{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:17px}
+  .brand .dot{color:var(--accent-ink)}
+  .tag{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+  header .spacer{flex:1}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+  main.wrap{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:16px;padding:16px 20px 60px;align-items:start}
+  @media (max-width:900px){ main.wrap{grid-template-columns:1fr} }
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px}
+  .box h2{font-family:"Bricolage Grotesque",sans-serif;font-size:15px;font-weight:700;margin:0 0 10px;display:flex;align-items:baseline;gap:8px}
+  .box h2 .sub{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--muted);font-weight:400;letter-spacing:.08em;text-transform:uppercase}
+  #scene{width:100%;height:auto;display:block;color:var(--ink)}
+  .row{display:flex;gap:6px;flex-wrap:wrap}
+  button{
+    font-family:"IBM Plex Mono",monospace;font-size:12px;background:var(--panel-2);
+    border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 11px;cursor:pointer;
+  }
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#1c1610;font-weight:500}
+  button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#1c1610;font-weight:500}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .matrix-card{background:var(--surface-dark);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+  #matrix{display:block;width:100%;max-width:340px;height:auto;margin:0 auto;border-radius:6px}
+  .matrix-card .cap{font-size:11.5px;color:#8d8171;text-align:center;margin:8px 0 0;font-family:"IBM Plex Mono",monospace}
+  .field{display:flex;gap:6px;margin-top:8px}
+  .field input[type=text]{
+    flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    border-radius:7px;padding:6px 10px;font-family:"IBM Plex Mono",monospace;font-size:12.5px;min-width:0;
+  }
+  .sliders{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;font-size:12px}
+  .sliders label{font-family:"IBM Plex Mono",monospace;color:var(--muted);white-space:nowrap}
+  .sliders output{font-family:"IBM Plex Mono",monospace;min-width:44px;text-align:right}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .tq{margin-top:4px}
+  .tqrow{display:grid;grid-template-columns:120px 1fr 86px;gap:10px;align-items:center;font-size:12px;padding:3px 0}
+  .tqrow .lbl{font-family:"IBM Plex Mono",monospace;color:var(--muted)}
+  .tqbar{height:9px;background:var(--panel-2);border-radius:5px;position:relative;overflow:hidden}
+  .tqbar i{position:absolute;inset:0;background:var(--accent);border-radius:5px;transform-origin:left;transition:transform .1s linear}
+  .tqbar i.hot{background:var(--warn)}
+  .tqbar .lim{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--muted);left:50%}
+  .tqrow .val{font-family:"IBM Plex Mono",monospace;text-align:right}
+  .hint{font-size:12px;color:var(--muted);margin:8px 0 0}
+  #dial{display:block;margin:0 auto;color:var(--ink);cursor:pointer;touch-action:none}
+  .footer-note{grid-column:1/-1;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+</style>
+
+<header>
+  <div class="wrap">
+    <span class="brand">robolamp<span class="dot">.</span>sim</span>
+    <span class="tag">phase 1 · character sandbox</span>
+    <span class="spacer"></span>
+    <button id="gridToggle" title="Toggle panel grid size">grid: 16×16</button>
+    <button id="muteBtn" aria-pressed="false" title="Chirp audio">sound: on</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div>
+    <div class="box">
+      <h2>Side view <span class="sub">mm-accurate · live projection &amp; torque</span></h2>
+      <svg id="scene" viewBox="0 0 760 430" role="img" aria-label="Live side view of the simulated lamp with projection cone"></svg>
+      <div class="tq">
+        <div class="tqrow"><span class="lbl">J2 shoulder</span><span class="tqbar"><i id="tq2"></i><span class="lim" style="left:50%"></span></span><span class="val" id="tq2v">–</span></div>
+        <div class="tqrow"><span class="lbl">J3 elbow</span><span class="tqbar"><i id="tq3"></i><span class="lim" style="left:50%"></span></span><span class="val" id="tq3v">–</span></div>
+      </div>
+      <p class="hint">Static gravity torque from the mass model (head 220 g, arms 80 g each, elbow assembly 110 g). Marker = 15 kg·cm (50% of ST3215@12 V stall — the sustained-safe zone). Full stall is the right edge.</p>
+    </div>
+
+    <div class="box">
+      <h2>Emotes <span class="sub">assets/emotes.json — the motion vocabulary</span></h2>
+      <div class="row" id="emoteBtns"></div>
+      <div class="row" style="margin-top:8px">
+        <button id="neutralBtn">→ neutral</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>Performances <span class="sub">what Claude's perform() tool will emit</span></h2>
+      <div class="row" id="perfBtns"></div>
+      <p class="hint">Each is a timed script of emotes + glyphs + chirps — the lamp "answering" without a voice. This is the full interaction concept in miniature.</p>
+    </div>
+
+    <div class="box">
+      <h2>Puppet mode <span class="sub">explore joint ranges &amp; torque envelope</span></h2>
+      <div class="sliders" id="sliders"></div>
+      <div class="row" style="margin-top:10px"><button id="puppetRelease">release puppet → life resumes</button></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="matrix-card">
+      <canvas id="matrix" width="340" height="340" role="img" aria-label="Simulated LED matrix display"></canvas>
+      <p class="cap" id="matrixCap">16×16 · glyph: happy</p>
+    </div>
+
+    <div class="box">
+      <h2>Glyphs <span class="sub">assets/glyphs.json</span></h2>
+      <div class="row" id="glyphBtns"></div>
+      <div class="row" style="margin-top:8px" id="animBtns"></div>
+      <div class="field">
+        <input type="text" id="scrollText" placeholder="scroll text… (5×7 font)" maxlength="40" value="HELLO JUN">
+        <button id="scrollBtn">scroll</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>Chirps <span class="sub">assets/chirps.json — piezo synth</span></h2>
+      <div class="row" id="chirpBtns"></div>
+      <p class="hint">Square-wave PWM synthesis, same parameters the real piezo driver will use. Click any button (browser audio needs a first click).</p>
+    </div>
+
+    <div class="box">
+      <h2>Hearing <span class="sub">top view · mic direction-of-arrival</span></h2>
+      <svg id="dial" viewBox="0 0 200 130" width="220" height="143" role="img" aria-label="Top-down yaw dial; click to place a speaking person and the lamp turns to face them"></svg>
+      <p class="hint">Click anywhere on the arc to "speak" from that direction — the lamp turns to face you (mic array DOA → base yaw), exactly the wake behaviour.</p>
+    </div>
+  </div>
+
+  <p class="footer-note">All motion here is generated from <span class="mono">assets/emotes.json</span>, <span class="mono">assets/glyphs.json</span> and <span class="mono">assets/chirps.json</span> — the same data files the Raspberry Pi daemon will consume. What looks right here is what the hardware will do. Idle breathing runs continuously; emotes layer on top; a crash would slump (torque-off), which is why neutral is a low-torque pose.</p>
+</main>
+
+<script>
+const ASSETS = {"glyphs":{"grid":16,"legend":{".":"off","o":"dim","#":"on"},"glyphs":{"happy":["................","................","................","...##.....##....","...##.....##....","...##.....##....","................","................","................",".##..........##.",".###........###.","..###......###..","...##########...",".....######.....","................","................"],"sad":["................","................","................","...##.....##....","...##.....##....","...##.....##....","................","................","................","................","....########....","...###....###...","..###......###..",".##..........##.","................","................"],"curious":["................",".....#####......","....##...##.....","...##.....##....","..........##....",".........##.....","........##......",".......##.......",".......##.......","................",".......##.......",".......##.......","................","....o......o....","....oo....oo....","................"],"heart":["................","................","...###....###...","..#####..#####..","..############..","..############..","...##########...","....########....",".....######.....","......####......",".......##.......","................","................","................","................","................"],"alert":["................","......####......","......####......","......####......","......####......","......####......",".......##.......",".......##.......",".......##.......","................","................","......####......","......####......","................","................","................"],"sleepy":["................","....######......",".......##.......","......##........","....######......","................",".........#####..","...........##...","..........##....",".........#####..","................","..##......##....","...##....##.....","....######......","................","................"],"yes":["................","................","................","............##..","...........##...","..........##....",".........##.....","..##....##......","...##..##.......","....####........",".....##.........","................","................","................","................","................"],"no":["................","................","................","...##......##...","....##....##....",".....##..##.....","......####......","......####......",".....##..##.....","....##....##....","...##......##...","................","................","................","................","................"],"sun":["................",".......##.......",".......##.......","..#..........#..","...#........#...","......####......",".....######.....",".....######.....",".....######.....",".....######.....","......####......","...#........#...","..#..........#..",".......##.......",".......##.......","................"],"moon":["................","................","................","......######....","....####........","...####.........","...####.........","..####..........","..####..........","...####.........","...####.........","....####........","......######....","................","................","................"],"rain":["................","................",".....######.....","...##########...","..############..","..############..","...##########...","................","...#...#...#....","..#...#...#.....","................","...#...#...#....","..#...#...#.....","................","................","................"],"note":["................","................","......########..","......########..","......##....##..","......##....##..","......##....##..","......##....##..","......##....##..","....####..####..","..######.######.","..######.######.","...####...####..","................","................","................"],"hourglass":["................","................","..############..","...##......##...","....##....##....",".....##..##.....","......####......",".......##.......","......####......",".....##..##.....","....##....##....","...##......##...","..############..","................","................","................"],"hi":["................","................","................","..##..##..####..","..##..##...##...","..##..##...##...","..######...##...","..##..##...##...","..##..##...##...","..##..##..####..","................","................","................","................","................","................"],"listening":["................","................","................","................","........#.......","....#...#.......","....#...#....#..",".#..#...#....#..",".#..#...#....#..",".#..#...#....#..","....#...#....#..","....#...#.......","........#.......","................","................","................"]}},"emotes":{"_comment":"Emote keyframe library. Angles in degrees, absolute. Joints: j1 base yaw, j2 shoulder pitch, j3 elbow pitch (relative to lower arm), j4 head pitch (relative to upper arm), j5 head roll. Tracks are [time_s, angle_deg] pairs; players ease (smoothstep) between keys and blend from the current pose at t=0. 'hold' emotes keep their final pose until the next trigger; 'loop' emotes repeat until interrupted.","neutral":{"j1":0,"j2":70,"j3":-50,"j4":-75,"j5":0},"limits":{"j1":[-150,150],"j2":[-10,95],"j3":[-110,110],"j4":[-90,90],"j5":[-60,60]},"emotes":{"acknowledge_nod":{"duration":0.9,"chirp":"ack","tracks":{"j4":[[0.25,-89],[0.55,-68],[0.9,-75]]}},"yes_nod":{"duration":1.1,"chirp":"yes","glyph":"yes","tracks":{"j4":[[0.2,-90],[0.4,-63],[0.6,-90],[0.8,-63],[1.1,-75]]}},"no_shake":{"duration":1.0,"chirp":"no","glyph":"no","tracks":{"j1":[[0.2,-16],[0.45,16],[0.7,-12],[1.0,0]]}},"curious_tilt":{"duration":1.5,"chirp":"curious","glyph":"curious","tracks":{"j5":[[0.35,26],[1.1,24],[1.5,0]],"j4":[[0.4,-62],[1.5,-75]]}},"excited_bounce":{"duration":1.3,"chirp":"happy","glyph":"happy","tracks":{"j2":[[0.15,80],[0.35,63],[0.55,78],[0.75,66],[1.0,73],[1.3,70]],"j3":[[0.15,-62],[0.35,-40],[0.55,-58],[0.75,-44],[1.3,-50]]}},"sad_droop":{"duration":2.0,"hold":true,"chirp":"sad","glyph":"sad","tracks":{"j2":[[2.0,54]],"j3":[[2.0,-72]],"j4":[[2.0,-88]]}},"alert_perk":{"duration":0.5,"hold":true,"chirp":"alert","glyph":"alert","tracks":{"j2":[[0.3,82],[0.5,80]],"j3":[[0.3,-36],[0.5,-38]],"j4":[[0.3,-45],[0.5,-48]]}},"look_up":{"duration":0.8,"hold":true,"tracks":{"j4":[[0.8,-22]],"j2":[[0.8,76]]}},"thinking":{"duration":3.0,"loop":true,"chirp":"think","glyph":"@thinking","tracks":{"j1":[[0.75,10],[2.25,-10],[3.0,0]],"j4":[[1.5,-68],[3.0,-75]]}},"happy_wiggle":{"duration":1.2,"chirp":"happy","glyph":"heart","tracks":{"j5":[[0.2,16],[0.5,-16],[0.8,12],[1.2,0]],"j2":[[0.3,75],[0.7,67],[1.2,70]]}},"sleep":{"duration":2.5,"hold":true,"chirp":"snore","glyph":"sleepy","tracks":{"j1":[[2.5,12]],"j2":[[2.5,52]],"j3":[[2.5,-80]],"j4":[[2.5,-88]]}},"wake_stretch":{"duration":1.6,"chirp":"happy","glyph":"sun","tracks":{"j2":[[0.7,90],[1.6,70]],"j3":[[0.7,-30],[1.6,-50]],"j4":[[0.5,-40],[1.0,-30],[1.6,-75]],"j5":[[0.8,10],[1.2,-10],[1.6,0]]}}}},"chirps":{"_comment":"Piezo chirp sound font. Each chirp is a list of segments [t_start_s, t_end_s, freq_start_hz, freq_end_hz, amplitude 0..1]. Square wave; per-segment amplitude envelope: 20% attack, 30% release. On hardware this maps to PWM frequency + duty-cycle modulation.","chirps":{"ack":[[0.0,0.09,880,1350,0.5]],"yes":[[0.0,0.08,780,780,0.5],[0.1,0.22,1050,1550,0.5]],"no":[[0.0,0.12,320,300,0.5],[0.18,0.32,290,260,0.5]],"curious":[[0.0,0.28,620,1150,0.45]],"happy":[[0.0,0.07,990,990,0.5],[0.09,0.16,1320,1320,0.5],[0.18,0.3,1650,1750,0.45]],"sad":[[0.0,0.45,780,392,0.4]],"alert":[[0.0,0.09,1500,1500,0.6],[0.15,0.24,1500,1500,0.6]],"think":[[0.0,0.05,700,720,0.25],[0.5,0.55,700,720,0.25],[1.0,1.05,700,720,0.25]],"snore":[[0.0,0.5,140,95,0.3],[0.9,1.3,130,90,0.25]]}}};
+(function(){
+"use strict";
+// ---------- constants ----------
+const NEUTRAL = ASSETS.emotes.neutral;
+const LIMITS = ASSETS.emotes.limits;
+const EMOTES = ASSETS.emotes.emotes;
+const GLYPHS = ASSETS.glyphs.glyphs;
+const CHIRPS = ASSETS.chirps.chirps;
+const L1 = 160, L2 = 160, LH = 70;          // mm link lengths
+const GROUND = -100, WALL_X = 560;          // mm scene geometry
+const SC = 0.72, OX = 130, OY = 310;        // mm->px mapping
+const px = x => OX + SC*x, py = y => OY - SC*y;
+const D2R = Math.PI/180;
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ---------- state ----------
+let cur = {...NEUTRAL};           // displayed pose (j1 = offset from baseYaw)
+cur.j1 = 0;
+let baseYaw = 0, baseYawTarget = 0;
+let active = null;                // running emote instance
+let holdPose = null;              // {joint: value} kept after a hold emote
+let manual = {};                  // puppet overrides
+let muted = false;
+let grid = 16;
+let perfTimers = [];
+
+// ---------- helpers ----------
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+const smooth = t => t*t*(3-2*t);
+function evalTrack(keys, t){
+  if(t <= keys[0][0]) return keys[0][1];
+  for(let i=1;i<keys.length;i++){
+    if(t <= keys[i][0]){
+      const [t0,v0]=keys[i-1],[t1,v1]=keys[i];
+      const u = t1===t0 ? 1 : (t-t0)/(t1-t0);
+      return v0 + (v1-v0)*smooth(u);
+    }
+  }
+  return keys[keys.length-1][1];
+}
+
+// ---------- emote engine ----------
+function trigger(name, opts){
+  const def = EMOTES[name];
+  if(!def) return;
+  startEmote(def, name);
+  if(def.chirp) playChirp(def.chirp);
+  if(def.glyph) setDisplayFromTag(def.glyph);
+  if(opts && opts.glyph) setDisplayFromTag(opts.glyph);
+}
+function startEmote(def, name){
+  clearPerfIfManual(name);
+  manual = {}; syncSliders();
+  holdPose = null;
+  const tracks = {};
+  for(const j in def.tracks){
+    const startVal = (j==="j1") ? cur.j1 : cur[j];
+    tracks[j] = [[0, startVal], ...def.tracks[j]];
+  }
+  active = {def, name, tracks, t0: performance.now()/1000};
+}
+function clearPerfIfManual(name){ /* user emote click during a performance cancels it */ }
+function releaseToNeutral(){
+  const def = {duration: 0.7, tracks: {}};
+  for(const j of ["j1","j2","j3","j4","j5"]){
+    const nv = j==="j1" ? 0 : NEUTRAL[j];
+    def.tracks[j] = [[0.7, nv]];
+  }
+  startEmote(def, "_release");
+}
+function updatePose(now, dt){
+  const target = {...NEUTRAL, j1: 0};
+  if(holdPose) Object.assign(target, holdPose);
+  let emoteJoints = {};
+  if(active){
+    const t = now - active.t0;
+    const dur = active.def.duration;
+    if(t >= dur){
+      if(active.def.loop){
+        active.t0 = now;
+        for(const j in active.tracks) active.tracks[j][0] = [0, j==="j1"?cur.j1:cur[j]];
+      } else if(active.def.hold){
+        holdPose = {};
+        for(const j in active.tracks) holdPose[j] = evalTrack(active.tracks[j], dur);
+        Object.assign(target, holdPose);
+        active = null;
+      } else {
+        const wasRelease = active.name === "_release";
+        active = null;
+        if(!wasRelease) releaseToNeutral();
+      }
+    }
+    if(active){
+      const tt = Math.min(now - active.t0, active.def.duration);
+      for(const j in active.tracks){
+        emoteJoints[j] = evalTrack(active.tracks[j], tt);
+      }
+    }
+  }
+  // manual overrides
+  for(const j in manual) { target[j] = manual[j]; delete emoteJoints[j]; }
+  // breathing layer
+  const asleep = holdPose && holdPose.j2 && holdPose.j2 < 60;
+  const bAmp = reduced ? 0 : (active ? 0.35 : (asleep ? 0.55 : 1));
+  const bt = now;
+  const breath = {
+    j2: 1.3*Math.sin(2*Math.PI*bt/(asleep?6.5:4.8))*bAmp,
+    j4: 0.9*Math.sin(2*Math.PI*bt/(asleep?6.5:4.8) + 1.2)*bAmp,
+    j5: 0.6*Math.sin(2*Math.PI*bt/7)*bAmp
+  };
+  // integrate
+  baseYaw += (baseYawTarget - baseYaw)*Math.min(1, dt*6);
+  for(const j of ["j1","j2","j3","j4","j5"]){
+    let v;
+    if(j in emoteJoints) v = emoteJoints[j];
+    else v = cur[j] + (target[j] - cur[j])*Math.min(1, dt*8);
+    if(breath[j] !== undefined && !(j in manual)) v += breath[j];
+    if(j==="j1") v = clamp(v, LIMITS.j1[0]-baseYaw, LIMITS.j1[1]-baseYaw);
+    else v = clamp(v, LIMITS[j][0], LIMITS[j][1]);
+    cur[j] = v;
+  }
+}
+
+// ---------- geometry & torque ----------
+function forwardKin(){
+  const r2 = cur.j2*D2R, r23 = (cur.j2+cur.j3)*D2R, rh = (cur.j2+cur.j3+cur.j4)*D2R;
+  const elbow = {x: L1*Math.cos(r2), y: L1*Math.sin(r2)};
+  const wrist = {x: elbow.x + L2*Math.cos(r23), y: elbow.y + L2*Math.sin(r23)};
+  const dir = {x: Math.cos(rh), y: Math.sin(rh)};
+  const lens = {x: wrist.x + LH*dir.x, y: wrist.y + LH*dir.y};
+  return {elbow, wrist, lens, dir, rh};
+}
+function torques(k){
+  const headCoM = {x: k.wrist.x + 35*k.dir.x, y: 0};
+  const tq2 = Math.max(0,(0.08*(k.elbow.x/2) + 0.11*k.elbow.x + 0.08*((k.elbow.x+k.wrist.x)/2) + 0.22*headCoM.x)/10);
+  const tq3 = Math.max(0,(0.08*((k.wrist.x-k.elbow.x)/2) + 0.22*(headCoM.x-k.elbow.x))/10);
+  return {tq2, tq3};
+}
+function projection(k){
+  const {lens, dir} = k;
+  if(dir.y < -0.05){
+    const t = (GROUND - lens.y)/dir.y;
+    const x = lens.x + t*dir.x;
+    if(x <= WALL_X - 8 && t > 0){
+      const dist = t;
+      const half = 0.21*dist;
+      const spread = Math.min(150, half/Math.max(0.25, -dir.y));
+      return {surface:"ground", x, dist, spread};
+    }
+  }
+  if(dir.x > 0.05){
+    const t = (WALL_X - lens.x)/dir.x;
+    const y = lens.y + t*dir.y;
+    if(t > 0 && y > GROUND && y < 330){
+      const dist = t;
+      const half = 0.21*dist;
+      const spread = Math.min(140, half/Math.max(0.3, dir.x));
+      return {surface:"wall", y, dist, spread};
+    }
+  }
+  return null;
+}
+
+// ---------- scene rendering ----------
+const scene = document.getElementById("scene");
+function renderScene(k, proj){
+  const yawSquash = Math.cos(baseYaw*D2R*0.6); // slight foreshortening when turned
+  const headPoly = (()=>{
+    const perp = {x:-k.dir.y, y:k.dir.x};
+    const w = k.wrist, l = k.lens;
+    const p = (pt)=>px(pt.x)+","+py(pt.y);
+    const a1={x:w.x+perp.x*12,y:w.y+perp.y*12}, a2={x:w.x-perp.x*12,y:w.y-perp.y*12};
+    const b1={x:l.x+perp.x*30,y:l.y+perp.y*30}, b2={x:l.x-perp.x*30,y:l.y-perp.y*30};
+    return p(a1)+" "+p(a2)+" "+p(b2)+" "+p(b1);
+  })();
+  let projSvg = "";
+  if(proj){
+    const lp = {x:px(k.lens.x), y:py(k.lens.y)};
+    if(proj.surface==="ground"){
+      const x0 = px(proj.x - proj.spread), x1 = px(proj.x + proj.spread), gy = py(GROUND);
+      projSvg = `
+        <line x1="${lp.x}" y1="${lp.y}" x2="${x0}" y2="${gy}" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="5 4" opacity=".8"/>
+        <line x1="${lp.x}" y1="${lp.y}" x2="${x1}" y2="${gy}" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="5 4" opacity=".8"/>
+        <line x1="${x0}" y1="${gy}" x2="${x1}" y2="${gy}" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+        <text x="${(x0+x1)/2}" y="${gy+16}" font-size="10.5" fill="currentColor" opacity=".6" text-anchor="middle" font-family="IBM Plex Mono,monospace">${Math.round(proj.dist)} mm</text>`;
+    } else {
+      const y0 = py(proj.y - proj.spread), y1 = py(proj.y + proj.spread), wx = px(WALL_X);
+      projSvg = `
+        <line x1="${lp.x}" y1="${lp.y}" x2="${wx}" y2="${y0}" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="5 4" opacity=".8"/>
+        <line x1="${lp.x}" y1="${lp.y}" x2="${wx}" y2="${y1}" stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="5 4" opacity=".8"/>
+        <line x1="${wx}" y1="${y0}" x2="${wx}" y2="${y1}" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+        <text x="${wx-10}" y="${(y0+y1)/2}" font-size="10.5" fill="currentColor" opacity=".6" text-anchor="end" font-family="IBM Plex Mono,monospace">${Math.round(proj.dist)} mm</text>`;
+    }
+  }
+  const rollTilt = cur.j5;
+  scene.innerHTML = `
+    <line x1="20" y1="${py(GROUND)}" x2="740" y2="${py(GROUND)}" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
+    <line x1="${px(WALL_X)}" y1="${py(GROUND)}" x2="${px(WALL_X)}" y2="40" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
+    <text x="${px(WALL_X)+8}" y="60" font-size="11" fill="currentColor" opacity=".5">wall</text>
+    <text x="700" y="${py(GROUND)+16}" font-size="11" fill="currentColor" opacity=".5" text-anchor="end">desk</text>
+    <rect x="${px(-90*yawSquash)}" y="${py(-40)}" width="${SC*180*yawSquash}" height="${SC*60}" rx="8" fill="var(--shell)" stroke="currentColor" stroke-width="1.5" opacity=".92"/>
+    <line x1="${px(0)}" y1="${py(-40)}" x2="${px(0)}" y2="${py(0)}" stroke="currentColor" stroke-width="8" stroke-linecap="round" opacity=".85"/>
+    ${projSvg}
+    <line x1="${px(0)}" y1="${py(0)}" x2="${px(k.elbow.x)}" y2="${py(k.elbow.y)}" stroke="currentColor" stroke-width="10" stroke-linecap="round" opacity=".9"/>
+    <line x1="${px(k.elbow.x)}" y1="${py(k.elbow.y)}" x2="${px(k.wrist.x)}" y2="${py(k.wrist.y)}" stroke="currentColor" stroke-width="10" stroke-linecap="round" opacity=".9"/>
+    <polygon points="${headPoly}" fill="var(--shell)" stroke="currentColor" stroke-width="1.5" opacity=".95" transform="rotate(${rollTilt*0.25} ${px(k.wrist.x)} ${py(k.wrist.y)})"/>
+    <circle cx="${px(k.lens.x)}" cy="${py(k.lens.y)}" r="7" fill="var(--accent)"/>
+    <circle cx="${px(0)}" cy="${py(0)}" r="7.5" fill="var(--bg)" stroke="var(--accent)" stroke-width="3"/>
+    <circle cx="${px(k.elbow.x)}" cy="${py(k.elbow.y)}" r="7.5" fill="var(--bg)" stroke="var(--accent)" stroke-width="3"/>
+    <circle cx="${px(k.wrist.x)}" cy="${py(k.wrist.y)}" r="7.5" fill="var(--bg)" stroke="var(--accent)" stroke-width="3"/>
+  `;
+}
+
+// ---------- torque UI ----------
+const tq2El=document.getElementById("tq2"), tq3El=document.getElementById("tq3");
+const tq2v=document.getElementById("tq2v"), tq3v=document.getElementById("tq3v");
+function renderTorque(t){
+  const f2 = clamp(t.tq2/30,0,1), f3 = clamp(t.tq3/30,0,1);
+  tq2El.style.transform = `scaleX(${f2})`; tq3El.style.transform = `scaleX(${f3})`;
+  tq2El.className = t.tq2>15?"hot":""; tq3El.className = t.tq3>15?"hot":"";
+  tq2v.textContent = t.tq2.toFixed(1)+" kg·cm"; tq3v.textContent = t.tq3.toFixed(1)+" kg·cm";
+}
+
+// ---------- display / matrix ----------
+const mcanvas = document.getElementById("matrix");
+const mctx = mcanvas.getContext("2d");
+const mcap = document.getElementById("matrixCap");
+let display = {kind:"glyph", name:"happy"};
+let animT0 = 0;
+const FONT57 = {
+  "A":[0x7E,0x11,0x11,0x11,0x7E],"B":[0x7F,0x49,0x49,0x49,0x36],"C":[0x3E,0x41,0x41,0x41,0x22],
+  "D":[0x7F,0x41,0x41,0x22,0x1C],"E":[0x7F,0x49,0x49,0x49,0x41],"F":[0x7F,0x09,0x09,0x09,0x01],
+  "G":[0x3E,0x41,0x49,0x49,0x7A],"H":[0x7F,0x08,0x08,0x08,0x7F],"I":[0x00,0x41,0x7F,0x41,0x00],
+  "J":[0x20,0x40,0x41,0x3F,0x01],"K":[0x7F,0x08,0x14,0x22,0x41],"L":[0x7F,0x40,0x40,0x40,0x40],
+  "M":[0x7F,0x02,0x0C,0x02,0x7F],"N":[0x7F,0x04,0x08,0x10,0x7F],"O":[0x3E,0x41,0x41,0x41,0x3E],
+  "P":[0x7F,0x09,0x09,0x09,0x06],"Q":[0x3E,0x41,0x51,0x21,0x5E],"R":[0x7F,0x09,0x19,0x29,0x46],
+  "S":[0x46,0x49,0x49,0x49,0x31],"T":[0x01,0x01,0x7F,0x01,0x01],"U":[0x3F,0x40,0x40,0x40,0x3F],
+  "V":[0x1F,0x20,0x40,0x20,0x1F],"W":[0x3F,0x40,0x38,0x40,0x3F],"X":[0x63,0x14,0x08,0x14,0x63],
+  "Y":[0x07,0x08,0x70,0x08,0x07],"Z":[0x61,0x51,0x49,0x45,0x43],
+  "0":[0x3E,0x51,0x49,0x45,0x3E],"1":[0x00,0x42,0x7F,0x40,0x00],"2":[0x42,0x61,0x51,0x49,0x46],
+  "3":[0x21,0x41,0x45,0x4B,0x31],"4":[0x18,0x14,0x12,0x7F,0x10],"5":[0x27,0x45,0x45,0x45,0x39],
+  "6":[0x3C,0x4A,0x49,0x49,0x30],"7":[0x01,0x71,0x09,0x05,0x03],"8":[0x36,0x49,0x49,0x49,0x36],
+  "9":[0x06,0x49,0x49,0x29,0x1E],"!":[0x00,0x00,0x5F,0x00,0x00],"?":[0x02,0x01,0x51,0x09,0x06],
+  ".":[0x00,0x60,0x60,0x00,0x00],"-":[0x08,0x08,0x08,0x08,0x08]," ":[0,0,0,0,0]
+};
+function textColumns(msg){
+  const cols=[];
+  for(const ch of msg.toUpperCase()){
+    const g = FONT57[ch] || FONT57["?"];
+    cols.push(...g, 0);
+  }
+  return cols;
+}
+function frameForDisplay(now){
+  const G = grid;
+  const fb = Array.from({length:G}, ()=>new Array(G).fill(0));
+  const off = (G-16)>>1;
+  if(display.kind==="glyph"){
+    const g = GLYPHS[display.name];
+    if(g) for(let r=0;r<16;r++) for(let c=0;c<16;c++){
+      const ch=g[r][c];
+      if(ch==="#") fb[r+off][c+off]=1; else if(ch==="o") fb[r+off][c+off]=0.35;
+    }
+  } else if(display.kind==="anim" && display.name==="thinking"){
+    const step = Math.floor((now-animT0)/0.38)%3;
+    for(let d=0;d<3;d++){
+      const col = off+3+d*5, on = d===step?1:0.3;
+      for(const r of [off+7,off+8]){ fb[r][col]=on; fb[r][col+1]=on; }
+    }
+  } else if(display.kind==="anim" && display.name==="spinner"){
+    const step = Math.floor((now-animT0)/0.09)%12;
+    const cx=(G-1)/2, cy=(G-1)/2, R=G*0.33;
+    for(let i=0;i<12;i++){
+      const a=(i/12)*2*Math.PI - Math.PI/2;
+      const r=Math.round(cy+R*Math.sin(a)), c=Math.round(cx+R*Math.cos(a));
+      const age=(step-i+12)%12;
+      fb[r][c] = age===0?1: age<4? 0.45-age*0.1 : 0;
+    }
+  } else if(display.kind==="scroll"){
+    const cols = display.cols;
+    const total = cols.length + G;
+    const pos = Math.floor(((now-animT0)*12) % total) - G;
+    const top = (G-7)>>1;
+    for(let c=0;c<G;c++){
+      const src = pos + c;
+      if(src>=0 && src<cols.length){
+        const bits = cols[src];
+        for(let r=0;r<7;r++) if(bits & (1<<r)) fb[top+r][c]=1;
+      }
+    }
+  }
+  return fb;
+}
+function renderMatrix(now){
+  const G = grid;
+  const cell = Math.floor(334/G), gap = Math.max(1, Math.floor(cell*0.12));
+  const size = G*cell + 2;
+  if(mcanvas.width !== size){ mcanvas.width = size; mcanvas.height = size; }
+  mctx.fillStyle = "#141110";
+  mctx.fillRect(0,0,size,size);
+  const fb = frameForDisplay(now);
+  for(let r=0;r<G;r++) for(let c=0;c<G;c++){
+    const v = fb[r][c];
+    const x = 1+c*cell, y = 1+r*cell, s = cell-gap;
+    if(v>=0.9){
+      mctx.save(); mctx.shadowColor="rgba(242,163,60,.9)"; mctx.shadowBlur=Math.max(6,cell*0.5);
+      mctx.fillStyle="#f2a33c"; mctx.beginPath(); mctx.roundRect(x,y,s,s,2); mctx.fill(); mctx.restore();
+    } else if(v>0){
+      mctx.fillStyle=`rgba(242,163,60,${0.15+v*0.5})`;
+      mctx.beginPath(); mctx.roundRect(x,y,s,s,2); mctx.fill();
+    } else {
+      mctx.fillStyle="#241f18";
+      mctx.beginPath(); mctx.roundRect(x,y,s,s,2); mctx.fill();
+    }
+  }
+  mcap.textContent = `${G}×${G} · ${display.kind==="glyph"?"glyph: "+display.name: display.kind==="anim"?"anim: "+display.name : 'scroll: "'+display.text+'"'}`;
+}
+function setDisplayFromTag(tag){
+  if(tag.startsWith("@")) { display={kind:"anim", name:tag.slice(1)}; animT0=performance.now()/1000; }
+  else { display={kind:"glyph", name:tag}; }
+  refreshGlyphButtons();
+}
+
+// ---------- chirp synth ----------
+let actx = null;
+function playChirp(name){
+  if(muted) return;
+  const spec = CHIRPS[name]; if(!spec) return;
+  try{
+    if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==="suspended") actx.resume();
+    const t0 = actx.currentTime + 0.02;
+    for(const [s0,s1,f0,f1,a] of spec){
+      const osc = actx.createOscillator(), g = actx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(f0, t0+s0);
+      osc.frequency.linearRampToValueAtTime(f1, t0+s1);
+      const dur = s1-s0, atk = dur*0.2, rel = dur*0.3;
+      g.gain.setValueAtTime(0, t0+s0);
+      g.gain.linearRampToValueAtTime(a*0.25, t0+s0+atk);
+      g.gain.setValueAtTime(a*0.25, t0+s1-rel);
+      g.gain.linearRampToValueAtTime(0, t0+s1);
+      osc.connect(g).connect(actx.destination);
+      osc.start(t0+s0); osc.stop(t0+s1+0.02);
+    }
+  }catch(e){/* audio unavailable */}
+}
+
+// ---------- performances ----------
+const PERFORMANCES = {
+  "greeting": [
+    {t:0.0, emote:"wake_stretch", glyph:"hi"},
+    {t:2.0, emote:"happy_wiggle"}
+  ],
+  "sunny tomorrow?": [
+    {t:0.0, emote:"alert_perk", glyph:"listening"},
+    {t:0.7, emote:"thinking"},
+    {t:3.2, emote:"yes_nod", glyph:"sun"},
+    {t:4.6, emote:"happy_wiggle", glyph:"sun"}
+  ],
+  "rain all week": [
+    {t:0.0, emote:"acknowledge_nod", glyph:"listening"},
+    {t:1.0, emote:"thinking"},
+    {t:3.4, emote:"sad_droop", glyph:"rain"}
+  ],
+  "bedtime": [
+    {t:0.0, emote:"yes_nod", glyph:"moon"},
+    {t:1.5, emote:"sleep"}
+  ]
+};
+function runPerformance(name){
+  stopPerformance();
+  for(const step of PERFORMANCES[name]){
+    perfTimers.push(setTimeout(()=>{
+      trigger(step.emote, {glyph: step.glyph});
+    }, step.t*1000));
+  }
+}
+function stopPerformance(){ perfTimers.forEach(clearTimeout); perfTimers = []; }
+
+// ---------- dial (top view / DOA) ----------
+const dial = document.getElementById("dial");
+function renderDial(){
+  const cx=100, cy=112, R=86;
+  const a2xy = (deg, r)=>{
+    const a = (-90 + deg)*D2R; // 0deg = front (up)
+    return [cx + r*Math.sin(a+Math.PI/2)*0 + r*Math.cos(a), cy + r*Math.sin(a)];
+  };
+  const yaw = baseYaw + cur.j1;
+  const [nx,ny] = a2xy(yaw*(150/150), R-18);
+  const [px_,py_] = a2xy(baseYawTarget, R-4);
+  const arc = (deg)=>a2xy(deg, R);
+  const [sx,sy]=arc(-150),[ex,ey]=arc(150);
+  dial.innerHTML = `
+    <path d="M ${sx} ${sy} A ${R} ${R} 0 1 1 ${ex} ${ey}" fill="none" stroke="currentColor" stroke-width="2" opacity=".4"/>
+    <circle cx="${cx}" cy="${cy}" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+    <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="var(--accent)" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="${px_}" cy="${py_}" r="6.5" fill="currentColor" opacity=".8"/>
+    <text x="${cx}" y="${cy+4}" font-size="9" fill="currentColor" text-anchor="middle" opacity=".7">lamp</text>
+    <text x="${px_}" y="${py_-10}" font-size="9.5" fill="currentColor" text-anchor="middle" opacity=".8">you</text>
+  `;
+}
+function dialPick(ev){
+  const r = dial.getBoundingClientRect();
+  const x = (ev.clientX - r.left)/r.width*200 - 100;
+  const y = (ev.clientY - r.top)/r.height*130 - 112;
+  let ang = Math.atan2(y, x)/D2R + 90;
+  if(ang>180) ang-=360;
+  baseYawTarget = clamp(ang, -150, 150);
+  trigger("acknowledge_nod");
+}
+dial.addEventListener("pointerdown", dialPick);
+
+// ---------- UI wiring ----------
+function mkBtn(parent, label, fn){
+  const b=document.createElement("button");
+  b.textContent=label; b.addEventListener("click", fn);
+  parent.appendChild(b); return b;
+}
+const emoteBtns = document.getElementById("emoteBtns");
+for(const name of Object.keys(EMOTES)) mkBtn(emoteBtns, name.replace(/_/g," "), ()=>{stopPerformance(); trigger(name);});
+document.getElementById("neutralBtn").addEventListener("click", ()=>{stopPerformance(); manual={}; syncSliders(); holdPose=null; releaseToNeutral();});
+const perfBtns = document.getElementById("perfBtns");
+for(const name of Object.keys(PERFORMANCES)) mkBtn(perfBtns, "▶ "+name, ()=>runPerformance(name)).classList.add("primary");
+const chirpBtns = document.getElementById("chirpBtns");
+for(const name of Object.keys(CHIRPS)) mkBtn(chirpBtns, name, ()=>playChirp(name));
+const glyphBtns = document.getElementById("glyphBtns");
+const glyphBtnMap = {};
+for(const name of Object.keys(GLYPHS)) glyphBtnMap[name] = mkBtn(glyphBtns, name, ()=>{display={kind:"glyph",name}; refreshGlyphButtons();});
+const animBtns = document.getElementById("animBtns");
+mkBtn(animBtns, "thinking (anim)", ()=>setDisplayFromTag("@thinking"));
+mkBtn(animBtns, "spinner (anim)", ()=>setDisplayFromTag("@spinner"));
+function refreshGlyphButtons(){
+  for(const n in glyphBtnMap) glyphBtnMap[n].setAttribute("aria-pressed", display.kind==="glyph"&&display.name===n ? "true":"false");
+}
+refreshGlyphButtons();
+document.getElementById("scrollBtn").addEventListener("click", ()=>{
+  const text = document.getElementById("scrollText").value || "HELLO";
+  display = {kind:"scroll", text, cols: textColumns(text)};
+  animT0 = performance.now()/1000;
+  refreshGlyphButtons();
+});
+document.getElementById("gridToggle").addEventListener("click", (e)=>{
+  grid = grid===16 ? 22 : 16;
+  e.target.textContent = `grid: ${grid}×${grid}`;
+});
+document.getElementById("muteBtn").addEventListener("click", (e)=>{
+  muted = !muted;
+  e.target.textContent = muted ? "sound: off" : "sound: on";
+  e.target.setAttribute("aria-pressed", muted);
+});
+// sliders
+const slidersEl = document.getElementById("sliders");
+const sliderMap = {};
+const JLABEL = {j1:"J1 yaw", j2:"J2 shoulder", j3:"J3 elbow", j4:"J4 head", j5:"J5 roll"};
+for(const j of ["j1","j2","j3","j4","j5"]){
+  const lab=document.createElement("label"); lab.textContent=JLABEL[j]; slidersEl.appendChild(lab);
+  const inp=document.createElement("input"); inp.type="range";
+  inp.min=LIMITS[j][0]; inp.max=LIMITS[j][1]; inp.step=1; inp.value= j==="j1"?0:NEUTRAL[j];
+  const out=document.createElement("output");
+  inp.addEventListener("input", ()=>{
+    stopPerformance(); active=null; holdPose=null;
+    manual[j]=parseFloat(inp.value);
+  });
+  slidersEl.appendChild(inp); slidersEl.appendChild(out);
+  sliderMap[j]={inp,out};
+}
+document.getElementById("puppetRelease").addEventListener("click", ()=>{ manual={}; releaseToNeutral(); });
+function syncSliders(){
+  for(const j in sliderMap){
+    const v = j==="j1" ? baseYaw+cur.j1 : cur[j];
+    sliderMap[j].out.value = Math.round(v)+"°";
+    if(!(j in manual) && document.activeElement!==sliderMap[j].inp) sliderMap[j].inp.value = v;
+  }
+}
+
+// ---------- main loop ----------
+let last = performance.now()/1000;
+function loop(){
+  const now = performance.now()/1000;
+  const dt = Math.min(0.05, now-last); last = now;
+  updatePose(now, dt);
+  const k = forwardKin();
+  renderScene(k, projection(k));
+  renderTorque(torques(k));
+  renderMatrix(now);
+  renderDial();
+  syncSliders();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>

@@ -1,0 +1,14 @@
+{
+  "_comment": "Piezo chirp sound font. Each chirp is a list of segments [t_start_s, t_end_s, freq_start_hz, freq_end_hz, amplitude 0..1]. Square wave; per-segment amplitude envelope: 20% attack, 30% release. On hardware this maps to PWM frequency + duty-cycle modulation.",
+  "chirps": {
+    "ack":     [[0.0, 0.09, 880, 1350, 0.5]],
+    "yes":     [[0.0, 0.08, 780, 780, 0.5], [0.10, 0.22, 1050, 1550, 0.5]],
+    "no":      [[0.0, 0.12, 320, 300, 0.5], [0.18, 0.32, 290, 260, 0.5]],
+    "curious": [[0.0, 0.28, 620, 1150, 0.45]],
+    "happy":   [[0.0, 0.07, 990, 990, 0.5], [0.09, 0.16, 1320, 1320, 0.5], [0.18, 0.30, 1650, 1750, 0.45]],
+    "sad":     [[0.0, 0.45, 780, 392, 0.4]],
+    "alert":   [[0.0, 0.09, 1500, 1500, 0.6], [0.15, 0.24, 1500, 1500, 0.6]],
+    "think":   [[0.0, 0.05, 700, 720, 0.25], [0.5, 0.55, 700, 720, 0.25], [1.0, 1.05, 700, 720, 0.25]],
+    "snore":   [[0.0, 0.5, 140, 95, 0.3], [0.9, 1.3, 130, 90, 0.25]]
+  }
+}
