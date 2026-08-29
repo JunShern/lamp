@@ -19,12 +19,15 @@ price checks; those show typical street prices.
 
 ## Display module
 
-Two-panel strategy (settles the fine-pitch wrinkle from DESIGN.md §5):
+Single-panel strategy: buy only the fine-pitch panel the head will actually
+use, and bench-test optics directly on it. (Optics calibration — focal
+length, lens distance, diffuser gap, focus LUT — is specific to the panel's
+physical size, so nothing done on a cheap 10 mm-pitch panel would transfer;
+the general gotchas below are already settled by prior art.)
 
 | Item | Pick | Price | Supplier | Notes |
 |---|---|---|---|---|
-| Bench matrix | BTF-Lighting WS2812B 16×16 flexible, 10 mm pitch | ~£20–25 *(unverified)* / $23.99 direct | [Amazon UK B088K1JH6X](https://www.amazon.co.uk/BTF-LIGHTING-Individual-Addressable-Flexible-Controllers/dp/B088K1JH6X) / [BTF direct](https://www.btf-lighting.com/products/ws2812b-panel-screen-8-8-16-16-8-32-pixel-256-pixels-digital-flexible-led-programmed-individually-addressable-full-color-dc5v) | Fast delivery; 160 mm square — for optics bench work, too big for the head |
-| Head matrix | **BTF WS2812B-2427 mini flexible panel** (fine pitch) | $50.99 (~£40) | [BTF direct](https://www.btf-lighting.com/products/ws2812b-mini-led-smd-2427-digital-11x44-22x22-digital-flexible-led-panel-screen-individually-addressable-dc5v) | 1–2 wk from China. Comes as 22×22/11×44; use a 16×16 window. Rigid 16×16 boards also exist on AliExpress ~£10–18 |
+| Head matrix | **BTF WS2812B-2427 mini flexible panel** (fine pitch) | $50.99 (~£40) | [BTF direct](https://www.btf-lighting.com/products/ws2812b-mini-led-smd-2427-digital-11x44-22x22-digital-flexible-led-panel-screen-individually-addressable-dc5v) | 1–2 wk from China. Comes as 22×22/11×44; use a 16×16 window — verify pitch/windowing on arrival. **Fallback if it disappoints:** rigid 16×16 boards on AliExpress ~£10–18, ordered later |
 | Projection lens | 100 mm double-convex glass lens | £13.20 | [eBay UK "lens-store"](https://www.ebay.co.uk/sch/i.html?_nkw=100mm+biconvex+lens+condenser) | Many diameter/FL combos in stock |
 | Fresnel | A4 Fresnel page-magnifier sheet | ~£4–8 *(unverified)* | Amazon UK / [magnifyingglasses.co.uk](https://magnifyingglasses.co.uk/product-category/page-sheet-magnifiers/) | Grooved side toward the wall |
 | Diffuser | LED diffuser sheet / thin acrylic | ~£5 | Amazon UK | See optics gotcha below |
@@ -64,11 +67,14 @@ out of the printed base.)
 
 ## Totals
 
+**Chosen path (2026-08-29): patient** — China lead times are fine, single
+fine-pitch panel only.
+
 | Path | Servos | Pi 5 | Everything else | Total |
 |---|---|---|---|---|
-| **Fast** (eBay UK servos, Pi Hut Pi) | £109 | £168 | ~£300 | **~£575** |
-| **Recommended** (multipack servos, Pi Hut Pi, skip bench PSU) | ~£68 | £168 | ~£285 | **~£520** |
-| **Patient** (multipack servos, Pimoroni Pi restock, one matrix, AliExpress fine-pitch rigid) | ~£68 | £140 | ~£250 | **~£455** |
+| Fast (eBay UK servos, Pi Hut Pi) | £109 | £168 | ~£278 | **~£555** |
+| Mixed (multipack servos, Pi Hut Pi, skip bench PSU) | ~£68 | £168 | ~£262 | **~£498** |
+| **Patient — chosen** (multipack servos, Pimoroni Pi restock) | ~£68 | £140 | ~£250 | **~£458** |
 
 The single biggest line is the Pi 5 8 GB at current shortage pricing. Levers:
 catch the Pimoroni restock (−£28), drop to 4 GB (fine for our workload if
