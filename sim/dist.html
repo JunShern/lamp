@@ -39,7 +39,7 @@
   .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px}
   .box h2{font-family:"Bricolage Grotesque",sans-serif;font-size:15px;font-weight:700;margin:0 0 10px;display:flex;align-items:baseline;gap:8px}
   .box h2 .sub{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--muted);font-weight:400;letter-spacing:.08em;text-transform:uppercase}
-  #scene{width:100%;height:auto;display:block;color:var(--ink)}
+  #scene{width:100%;height:auto;display:block;color:var(--ink);user-select:none;-webkit-user-select:none;touch-action:none}
   .row{display:flex;gap:6px;flex-wrap:wrap}
   button{
     font-family:"IBM Plex Mono",monospace;font-size:12px;background:var(--panel-2);
@@ -164,7 +164,7 @@
 </main>
 
 <script>
-const ASSETS = {"glyphs":{"grid":16,"legend":{".":"off","o":"dim","#":"on"},"glyphs":{"happy":["................","................","................","...##.....##....","...##.....##....","...##.....##....","................","................","................",".##..........##.",".###........###.","..###......###..","...##########...",".....######.....","................","................"],"sad":["................","................","................","...##.....##....","...##.....##....","...##.....##....","................","................","................","................","....########....","...###....###...","..###......###..",".##..........##.","................","................"],"curious":["................",".....#####......","....##...##.....","...##.....##....","..........##....",".........##.....","........##......",".......##.......",".......##.......","................",".......##.......",".......##.......","................","....o......o....","....oo....oo....","................"],"heart":["................","................","...###....###...","..#####..#####..","..############..","..############..","...##########...","....########....",".....######.....","......####......",".......##.......","................","................","................","................","................"],"alert":["................","......####......","......####......","......####......","......####......","......####......",".......##.......",".......##.......",".......##.......","................","................","......####......","......####......","................","................","................"],"sleepy":["................","....######......",".......##.......","......##........","....######......","................",".........#####..","...........##...","..........##....",".........#####..","................","..##......##....","...##....##.....","....######......","................","................"],"yes":["................","................","................","............##..","...........##...","..........##....",".........##.....","..##....##......","...##..##.......","....####........",".....##.........","................","................","................","................","................"],"no":["................","................","................","...##......##...","....##....##....",".....##..##.....","......####......","......####......",".....##..##.....","....##....##....","...##......##...","................","................","................","................","................"],"sun":["................",".......##.......",".......##.......","..#..........#..","...#........#...","......####......",".....######.....",".....######.....",".....######.....",".....######.....","......####......","...#........#...","..#..........#..",".......##.......",".......##.......","................"],"moon":["................","................","................","......######....","....####........","...####.........","...####.........","..####..........","..####..........","...####.........","...####.........","....####........","......######....","................","................","................"],"rain":["................","................",".....######.....","...##########...","..############..","..############..","...##########...","................","...#...#...#....","..#...#...#.....","................","...#...#...#....","..#...#...#.....","................","................","................"],"note":["................","................","......########..","......########..","......##....##..","......##....##..","......##....##..","......##....##..","......##....##..","....####..####..","..######.######.","..######.######.","...####...####..","................","................","................"],"hourglass":["................","................","..############..","...##......##...","....##....##....",".....##..##.....","......####......",".......##.......","......####......",".....##..##.....","....##....##....","...##......##...","..############..","................","................","................"],"hi":["................","................","................","..##..##..####..","..##..##...##...","..##..##...##...","..######...##...","..##..##...##...","..##..##...##...","..##..##..####..","................","................","................","................","................","................"],"listening":["................","................","................","................","........#.......","....#...#.......","....#...#....#..",".#..#...#....#..",".#..#...#....#..",".#..#...#....#..","....#...#....#..","....#...#.......","........#.......","................","................","................"]}},"emotes":{"_comment":"Emote keyframe library. Angles in degrees, absolute. Joints: j1 base yaw, j2 shoulder pitch, j3 elbow pitch (relative to lower arm), j4 head pitch (relative to upper arm), j5 head roll. Tracks are [time_s, angle_deg] pairs; players ease (smoothstep) between keys and blend from the current pose at t=0. 'hold' emotes keep their final pose until the next trigger; 'loop' emotes repeat until interrupted.","neutral":{"j1":0,"j2":70,"j3":-50,"j4":-75,"j5":0},"limits":{"j1":[-150,150],"j2":[-10,95],"j3":[-110,110],"j4":[-90,90],"j5":[-60,60]},"emotes":{"acknowledge_nod":{"duration":0.9,"chirp":"ack","tracks":{"j4":[[0.25,-89],[0.55,-68],[0.9,-75]]}},"yes_nod":{"duration":1.1,"chirp":"yes","glyph":"yes","tracks":{"j4":[[0.2,-90],[0.4,-63],[0.6,-90],[0.8,-63],[1.1,-75]]}},"no_shake":{"duration":1.0,"chirp":"no","glyph":"no","tracks":{"j1":[[0.2,-16],[0.45,16],[0.7,-12],[1.0,0]]}},"curious_tilt":{"duration":1.5,"chirp":"curious","glyph":"curious","tracks":{"j5":[[0.35,26],[1.1,24],[1.5,0]],"j4":[[0.4,-62],[1.5,-75]]}},"excited_bounce":{"duration":1.35,"chirp":"happy","glyph":"happy","tracks":{"j2":[[0.12,66],[0.32,78],[0.55,65],[0.78,75],[1.05,68],[1.35,70]],"j3":[[0.12,-44],[0.32,-60],[0.55,-42],[0.78,-56],[1.35,-50]]}},"sad_droop":{"duration":2.0,"hold":true,"chirp":"sad","glyph":"sad","tracks":{"j2":[[2.0,54]],"j3":[[2.0,-72]],"j4":[[2.0,-88]]}},"alert_perk":{"duration":0.5,"hold":true,"chirp":"alert","glyph":"alert","tracks":{"j2":[[0.3,82],[0.5,80]],"j3":[[0.3,-36],[0.5,-38]],"j4":[[0.3,-45],[0.5,-48]]}},"look_up":{"duration":0.8,"hold":true,"tracks":{"j4":[[0.8,-22]],"j2":[[0.8,76]]}},"thinking":{"duration":3.0,"loop":true,"chirp":"think","glyph":"@thinking","tracks":{"j1":[[0.75,10],[2.25,-10],[3.0,0]],"j4":[[1.5,-68],[3.0,-75]]}},"happy_wiggle":{"duration":1.2,"chirp":"happy","glyph":"heart","tracks":{"j5":[[0.2,16],[0.5,-16],[0.8,12],[1.2,0]],"j2":[[0.3,75],[0.7,67],[1.2,70]]}},"sleep":{"duration":2.5,"hold":true,"chirp":"snore","glyph":"sleepy","tracks":{"j1":[[2.5,12]],"j2":[[2.5,52]],"j3":[[2.5,-80]],"j4":[[2.5,-88]]}},"wave_hello":{"duration":1.8,"chirp":"happy","glyph":"hi","tracks":{"j5":[[0.4,20],[0.75,-15],[1.1,16],[1.45,-11],[1.8,0]],"j4":[[0.35,-58],[1.8,-75]],"j2":[[0.35,78],[1.8,70]]}},"wake_stretch":{"duration":1.6,"chirp":"happy","glyph":"sun","tracks":{"j2":[[0.7,90],[1.6,70]],"j3":[[0.7,-30],[1.6,-50]],"j4":[[0.5,-40],[1.0,-30],[1.6,-75]],"j5":[[0.8,10],[1.2,-10],[1.6,0]]}}}},"chirps":{"_comment":"Piezo chirp sound font. Each chirp is a list of segments [t_start_s, t_end_s, freq_start_hz, freq_end_hz, amplitude 0..1]. Square wave; per-segment amplitude envelope: 20% attack, 30% release. On hardware this maps to PWM frequency + duty-cycle modulation.","chirps":{"ack":[[0.0,0.09,880,1350,0.5]],"yes":[[0.0,0.08,780,780,0.5],[0.1,0.22,1050,1550,0.5]],"no":[[0.0,0.12,320,300,0.5],[0.18,0.32,290,260,0.5]],"curious":[[0.0,0.28,620,1150,0.45]],"happy":[[0.0,0.07,990,990,0.5],[0.09,0.16,1320,1320,0.5],[0.18,0.3,1650,1750,0.45]],"sad":[[0.0,0.45,780,392,0.4]],"alert":[[0.0,0.09,1500,1500,0.6],[0.15,0.24,1500,1500,0.6]],"think":[[0.0,0.05,700,720,0.25],[0.5,0.55,700,720,0.25],[1.0,1.05,700,720,0.25]],"snore":[[0.0,0.5,140,95,0.3],[0.9,1.3,130,90,0.25]]}}};
+const ASSETS = {"glyphs":{"grid":16,"legend":{".":"off","o":"dim","#":"on"},"glyphs":{"happy":["................","................","................","...##.....##....","...##.....##....","...##.....##....","................","................","................",".##..........##.",".###........###.","..###......###..","...##########...",".....######.....","................","................"],"sad":["................","................","................","...##.....##....","...##.....##....","...##.....##....","................","................","................","................","....########....","...###....###...","..###......###..",".##..........##.","................","................"],"curious":["................",".....#####......","....##...##.....","...##.....##....","..........##....",".........##.....","........##......",".......##.......",".......##.......","................",".......##.......",".......##.......","................","....o......o....","....oo....oo....","................"],"heart":["................","................","...###....###...","..#####..#####..","..############..","..############..","...##########...","....########....",".....######.....","......####......",".......##.......","................","................","................","................","................"],"alert":["................","......####......","......####......","......####......","......####......","......####......",".......##.......",".......##.......",".......##.......","................","................","......####......","......####......","................","................","................"],"sleepy":["................","....######......",".......##.......","......##........","....######......","................",".........#####..","...........##...","..........##....",".........#####..","................","..##......##....","...##....##.....","....######......","................","................"],"yes":["................","................","................","............##..","...........##...","..........##....",".........##.....","..##....##......","...##..##.......","....####........",".....##.........","................","................","................","................","................"],"no":["................","................","................","...##......##...","....##....##....",".....##..##.....","......####......","......####......",".....##..##.....","....##....##....","...##......##...","................","................","................","................","................"],"sun":["................",".......##.......",".......##.......","..#..........#..","...#........#...","......####......",".....######.....",".....######.....",".....######.....",".....######.....","......####......","...#........#...","..#..........#..",".......##.......",".......##.......","................"],"moon":["................","................","................","......######....","....####........","...####.........","...####.........","..####..........","..####..........","...####.........","...####.........","....####........","......######....","................","................","................"],"rain":["................","................",".....######.....","...##########...","..############..","..############..","...##########...","................","...#...#...#....","..#...#...#.....","................","...#...#...#....","..#...#...#.....","................","................","................"],"note":["................","................","......########..","......########..","......##....##..","......##....##..","......##....##..","......##....##..","......##....##..","....####..####..","..######.######.","..######.######.","...####...####..","................","................","................"],"hourglass":["................","................","..############..","...##......##...","....##....##....",".....##..##.....","......####......",".......##.......","......####......",".....##..##.....","....##....##....","...##......##...","..############..","................","................","................"],"hi":["................","................","................","..##..##..####..","..##..##...##...","..##..##...##...","..######...##...","..##..##...##...","..##..##...##...","..##..##..####..","................","................","................","................","................","................"],"yawn":["................","................","................","................","..####....####..","................","................","................","......####......",".....##..##.....",".....##..##.....","......####......","................","................","................","................"],"listening":["................","................","................","................","........#.......","....#...#.......","....#...#....#..",".#..#...#....#..",".#..#...#....#..",".#..#...#....#..","....#...#....#..","....#...#.......","........#.......","................","................","................"]}},"emotes":{"_comment":"Emote keyframe library. Angles in degrees, absolute. Joints: j1 base yaw, j2 shoulder pitch, j3 elbow pitch (relative to lower arm), j4 head pitch (relative to upper arm), j5 head roll. Tracks are [time_s, angle_deg] pairs; players ease (smoothstep) between keys and blend from the current pose at t=0. 'hold' emotes keep their final pose until the next trigger; 'loop' emotes repeat until interrupted.","neutral":{"j1":0,"j2":70,"j3":-50,"j4":-75,"j5":0},"limits":{"j1":[-150,150],"j2":[-10,95],"j3":[-110,110],"j4":[-90,90],"j5":[-60,60]},"emotes":{"acknowledge_nod":{"duration":0.9,"chirp":"ack","tracks":{"j4":[[0.25,-89],[0.55,-68],[0.9,-75]]}},"yes_nod":{"duration":1.1,"chirp":"yes","glyph":"yes","tracks":{"j4":[[0.2,-90],[0.4,-63],[0.6,-90],[0.8,-63],[1.1,-75]]}},"no_shake":{"duration":1.0,"chirp":"no","glyph":"no","tracks":{"j1":[[0.2,-16],[0.45,16],[0.7,-12],[1.0,0]]}},"curious_tilt":{"duration":1.5,"chirp":"curious","glyph":"curious","tracks":{"j5":[[0.35,26],[1.1,24],[1.5,0]],"j4":[[0.4,-62],[1.5,-75]]}},"excited_bounce":{"duration":1.35,"chirp":"happy","glyph":"happy","tracks":{"j2":[[0.12,66],[0.32,78],[0.55,65],[0.78,75],[1.05,68],[1.35,70]],"j3":[[0.12,-44],[0.32,-60],[0.55,-42],[0.78,-56],[1.35,-50]]}},"sad_droop":{"duration":2.0,"hold":true,"chirp":"sad","glyph":"sad","tracks":{"j2":[[2.0,54]],"j3":[[2.0,-72]],"j4":[[2.0,-88]]}},"alert_perk":{"duration":0.5,"hold":true,"chirp":"alert","glyph":"alert","tracks":{"j2":[[0.3,82],[0.5,80]],"j3":[[0.3,-36],[0.5,-38]],"j4":[[0.3,-45],[0.5,-48]]}},"look_up":{"duration":0.8,"hold":true,"tracks":{"j4":[[0.8,-22]],"j2":[[0.8,76]]}},"thinking":{"duration":3.0,"loop":true,"chirp":"think","glyph":"@thinking","tracks":{"j1":[[0.75,10],[2.25,-10],[3.0,0]],"j4":[[1.5,-68],[3.0,-75]]}},"happy_wiggle":{"duration":1.2,"chirp":"happy","glyph":"heart","tracks":{"j5":[[0.2,16],[0.5,-16],[0.8,12],[1.2,0]],"j2":[[0.3,75],[0.7,67],[1.2,70]]}},"sleep":{"duration":2.5,"hold":true,"chirp":"snore","glyph":"sleepy","tracks":{"j1":[[2.5,12]],"j2":[[2.5,52]],"j3":[[2.5,-80]],"j4":[[2.5,-88]]}},"wave_hello":{"duration":1.8,"chirp":"happy","glyph":"hi","tracks":{"j5":[[0.4,20],[0.75,-15],[1.1,16],[1.45,-11],[1.8,0]],"j4":[[0.35,-58],[1.8,-75]],"j2":[[0.35,78],[1.8,70]]}},"wake_stretch":{"duration":1.6,"chirp":"happy","glyph":"sun","tracks":{"j2":[[0.7,90],[1.6,70]],"j3":[[0.7,-30],[1.6,-50]],"j4":[[0.5,-40],[1.0,-30],[1.6,-75]],"j5":[[0.8,10],[1.2,-10],[1.6,0]]}}}},"chirps":{"_comment":"Piezo chirp sound font. Each chirp is a list of segments [t_start_s, t_end_s, freq_start_hz, freq_end_hz, amplitude 0..1]. Square wave; per-segment amplitude envelope: 20% attack, 30% release. On hardware this maps to PWM frequency + duty-cycle modulation.","chirps":{"ack":[[0.0,0.09,880,1350,0.5]],"yes":[[0.0,0.08,780,780,0.5],[0.1,0.22,1050,1550,0.5]],"no":[[0.0,0.12,320,300,0.5],[0.18,0.32,290,260,0.5]],"curious":[[0.0,0.28,620,1150,0.45]],"happy":[[0.0,0.07,990,990,0.5],[0.09,0.16,1320,1320,0.5],[0.18,0.3,1650,1750,0.45]],"sad":[[0.0,0.45,780,392,0.4]],"alert":[[0.0,0.09,1500,1500,0.6],[0.15,0.24,1500,1500,0.6]],"think":[[0.0,0.05,700,720,0.25],[0.5,0.55,700,720,0.25],[1.0,1.05,700,720,0.25]],"snore":[[0.0,0.5,140,95,0.3],[0.9,1.3,130,90,0.25]]}}};
 (function(){
 "use strict";
 // ---------- constants ----------
@@ -282,6 +282,14 @@ function updatePose(now, dt){
   }
   // manual overrides
   for(const j in manual) { target[j] = manual[j]; delete emoteJoints[j]; }
+  // dragging the head: follow the hand via IK, keep the face's world angle
+  if(dragging && dragTarget){
+    const ik = ikToPoint(dragTarget);
+    target.j2 = ik.j2; target.j3 = ik.j3;
+    target.j4 = clamp(dragHeadWorld - ik.j2 - ik.j3, LIMITS.j4[0], LIMITS.j4[1]);
+    target.j5 = 0;
+    emoteJoints = {};
+  }
   // breathing layer
   const asleep = holdPose && holdPose.j2 && holdPose.j2 < 60;
   const bAmp = reduced ? 0 : (active ? 0.35 : (asleep ? 0.55 : 1));
@@ -367,7 +375,7 @@ function projection(k){
 // ---------- scene rendering ----------
 const scene = document.getElementById("scene");
 const ACCENT_EDGE = "#c07f22";
-function renderScene(k, proj, fb){
+function renderScene(k, proj, fb, now){
   const yawSquash = Math.cos(baseYaw*D2R*0.6); // slight foreshortening when turned
   const perp = {x:-k.dir.y, y:k.dir.x};
   const headPoly = (()=>{
@@ -425,6 +433,19 @@ function renderScene(k, proj, fb){
     <line x1="${px(a.x)}" y1="${py(a.y)}" x2="${px(b.x)}" y2="${py(b.y)}" stroke="${ACCENT_EDGE}" stroke-width="15" stroke-linecap="round" opacity=".5"/>
     <line x1="${px(a.x)}" y1="${py(a.y)}" x2="${px(b.x)}" y2="${py(b.y)}" stroke="var(--shell)" stroke-width="11" stroke-linecap="round"/>`;
   const recP = {x:k.wrist.x+(k.lens.x-k.wrist.x)*0.8+perp.x*24, y:k.wrist.y+(k.lens.y-k.wrist.y)*0.8+perp.y*24};
+  // squash & stretch from arm speed
+  const squash = Math.min(0.10, (Math.abs(vel.j2)+Math.abs(vel.j3))*0.0009);
+  // floating z's while asleep
+  let zzz = "";
+  if(isAsleep()){
+    for(let i=0;i<3;i++){
+      const ph = ((now*0.55 + i*0.8) % 2.4);
+      const op = Math.max(0, 0.55*(1 - ph/2.4));
+      const zx = px(k.wrist.x + 26 + i*14 + 6*Math.sin(now*1.3+i*2));
+      const zy = py(k.wrist.y + 34 + ph*30);
+      zzz += `<text x="${zx.toFixed(0)}" y="${zy.toFixed(0)}" font-size="${11+i*3}" fill="currentColor" opacity="${op.toFixed(2)}" font-family="Bricolage Grotesque,sans-serif" font-weight="700">z</text>`;
+    }
+  }
   scene.innerHTML = `
     <line x1="20" y1="${py(GROUND)}" x2="740" y2="${py(GROUND)}" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
     <line x1="${px(WALL_X)}" y1="${py(GROUND)}" x2="${px(WALL_X)}" y2="40" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
@@ -437,6 +458,7 @@ function renderScene(k, proj, fb){
     <line x1="${px(0)}" y1="${py(-4)}" x2="${px(0)}" y2="${py(0)}" stroke="var(--shell)" stroke-width="9" stroke-linecap="round"/>
     ${arm({x:0,y:0}, k.elbow)}
     ${arm(k.elbow, k.wrist)}
+    <g transform="translate(${px(k.wrist.x)} ${py(k.wrist.y)}) scale(${(1-squash*0.5).toFixed(3)} ${(1+squash).toFixed(3)}) translate(${-px(k.wrist.x)} ${-py(k.wrist.y)})">
     <g transform="rotate(${cur.j5*0.25} ${px(k.wrist.x)} ${py(k.wrist.y)})">
       <polygon points="${headPoly}" fill="var(--shell)" stroke="${ACCENT_EDGE}" stroke-width="1.6"/>
       <line x1="${px(k.lens.x+perp.x*38)}" y1="${py(k.lens.y+perp.y*38)}" x2="${px(k.lens.x-perp.x*38)}" y2="${py(k.lens.y-perp.y*38)}" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
@@ -446,6 +468,8 @@ function renderScene(k, proj, fb){
       <rect x="${-G*fs/2-3}" y="${-G*fs/2-3}" width="${G*fs+6}" height="${G*fs+6}" rx="6" fill="#141110" stroke="${ACCENT_EDGE}" stroke-width="1.4"/>
       ${facePix}
     </g>
+    </g>
+    ${zzz}
     ${joint({x:0,y:0})}
     ${joint(k.elbow)}
     ${joint(k.wrist)}
@@ -790,10 +814,39 @@ function sceneToMM(ev){
 }
 function isAsleep(){ return holdPose && holdPose.j2 !== undefined && holdPose.j2 < 60; }
 let lastNoticeAt = -99;
+let dragging = false, dragHead = false, dragTarget = null, downPos = null, dragHeadWorld = -55;
+function ikToPoint(p){
+  let d = Math.hypot(p.x, p.y);
+  d = clamp(d, 80, L1 + L2 - 8);
+  const a = Math.atan2(p.y, p.x);
+  const cosE = clamp((L1*L1 + L2*L2 - d*d)/(2*L1*L2), -1, 1);
+  const cosS = clamp((L1*L1 + d*d - L2*L2)/(2*L1*d), -1, 1);
+  const j2 = (a + Math.acos(cosS))/D2R;                  // elbow-up solution
+  const j3 = -(Math.PI - Math.acos(cosE))/D2R;
+  return {j2: clamp(j2, LIMITS.j2[0], LIMITS.j2[1]), j3: clamp(j3, LIMITS.j3[0], LIMITS.j3[1])};
+}
+function headHit(p){
+  if(!lastK) return false;
+  const w = lastK.wrist, l = lastK.lens;
+  const dx = l.x-w.x, dy = l.y-w.y, len2 = dx*dx+dy*dy;
+  const t = clamp(((p.x-w.x)*dx + (p.y-w.y)*dy)/len2, 0, 1);
+  return Math.hypot(p.x-(w.x+t*dx), p.y-(w.y+t*dy)) < 55;
+}
 scene.addEventListener("pointermove", ev => {
-  gazeTarget = sceneToMM(ev);
+  const p = sceneToMM(ev);
+  gazeTarget = p;
   const now = performance.now()/1000;
   if(now - lastInteract > 3) lastInteract = now;   // presence keeps it awake
+  if(dragHead){
+    if(!dragging && downPos && Math.hypot(p.x-downPos.x, p.y-downPos.y) > 12){
+      dragging = true;
+      stopPerformance(); active = null; holdPose = null; manual = {}; syncSliders();
+      dragHeadWorld = cur.j2 + cur.j3 + cur.j4;
+      playChirp("curious");
+    }
+    if(dragging) dragTarget = p;
+  }
+  scene.style.cursor = dragging ? "grabbing" : (headHit(p) ? "grab" : "default");
 });
 scene.addEventListener("pointerenter", () => {
   const now = performance.now()/1000;
@@ -807,24 +860,43 @@ scene.addEventListener("pointerleave", () => { gazeTarget = null; });
 scene.addEventListener("pointerdown", ev => {
   const p = sceneToMM(ev);
   lastInteract = performance.now()/1000;
-  stopPerformance();
-  if(isAsleep()){ trigger("wake_stretch"); return; }
+  if(isAsleep()){ stopPerformance(); trigger("wake_stretch"); return; }
   if(!lastK) return;
-  // head hit test: distance to wrist->lens segment
-  const w = lastK.wrist, l = lastK.lens;
-  const dx = l.x-w.x, dy = l.y-w.y, len2 = dx*dx+dy*dy;
-  const t = clamp(((p.x-w.x)*dx + (p.y-w.y)*dy)/len2, 0, 1);
-  const cx = w.x+t*dx, cy = w.y+t*dy;
-  const dHead = Math.hypot(p.x-cx, p.y-cy);
-  const dBase = (p.y < -20 && Math.abs(p.x) < 110) ? 0 : 99;
-  if(dHead < 55){ trigger("happy_wiggle"); }          // pet the head
-  else if(dBase < 10){ trigger("alert_perk"); setTimeout(()=>{ if(!active) releaseToNeutral(); }, 900); } // boop the base
+  if(headHit(p)){
+    dragHead = true; downPos = p;
+    try{ scene.setPointerCapture(ev.pointerId); }catch(e){}
+    return;
+  }
+  const dBase = (p.y < -20 && Math.abs(p.x) < 110);
+  if(dBase){ stopPerformance(); trigger("alert_perk"); setTimeout(()=>{ if(!active) releaseToNeutral(); }, 900); } // boop the base
 });
+scene.addEventListener("pointerup", () => {
+  if(dragHead && !dragging){ stopPerformance(); trigger("happy_wiggle"); }   // a tap is a pet
+  else if(dragging){ releaseToNeutral(); playChirp("happy"); }               // let go -> springs home
+  dragHead = false; dragging = false; dragTarget = null; downPos = null;
+  lastInteract = performance.now()/1000;
+});
+let sleepPending = false;
 function idleLife(now){
-  if(active || Object.keys(manual).length || perfTimers.length) return;
-  // fall asleep when ignored
-  if(!isAsleep() && now - lastInteract > 95){ startEmote(EMOTES.sleep, "sleep"); setDisplayFromTag("sleepy"); if(!muted) playChirp("snore"); return; }
-  if(isAsleep()) return;
+  if(active || Object.keys(manual).length || perfTimers.length || dragging) return;
+  // yawn, then fall asleep when ignored
+  if(!isAsleep() && !sleepPending && now - lastInteract > 95){
+    sleepPending = true;
+    startEmote({duration:1.9, tracks:{
+      j4:[[0.5,-55],[1.2,-58],[1.9,-72]],
+      j2:[[0.5,75],[1.9,70]],
+      j5:[[0.6,8],[1.9,0]]
+    }}, "_yawn");
+    setDisplayFromTag("yawn");
+    setTimeout(()=>{
+      sleepPending = false;
+      if(performance.now()/1000 - lastInteract > 95 && !dragging){
+        startEmote(EMOTES.sleep, "sleep"); setDisplayFromTag("sleepy"); playChirp("snore");
+      }
+    }, 2300);
+    return;
+  }
+  if(isAsleep() || sleepPending) return;
   if(now < nextIdleAt || holdPose) return;
   nextIdleAt = now + 7 + Math.random()*9;
   const r = Math.random();
@@ -856,7 +928,7 @@ function loop(){
     eyeOffY = Math.max(-1, Math.min(1, Math.round(-(gazeTarget.y - k.lens.y)/250)));
   } else { eyeOffX = 0; eyeOffY = 0; }
   const fb = frameForDisplay(now);
-  renderScene(k, projection(k), fb);
+  renderScene(k, projection(k), fb, now);
   renderTorque(torques(k));
   renderMatrix(fb);
   renderDial();
