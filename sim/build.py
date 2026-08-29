@@ -16,12 +16,15 @@ def main() -> None:
         "emotes": json.loads((ROOT / "assets/emotes.json").read_text()),
         "chirps": json.loads((ROOT / "assets/chirps.json").read_text()),
     }
-    # sanity checks
-    for name, rows in assets["glyphs"]["glyphs"].items():
+    # sanity checks (glyphs are either a plain row array or {color?, palette?, rows})
+    for name, gdef in assets["glyphs"]["glyphs"].items():
+        rows = gdef["rows"] if isinstance(gdef, dict) else gdef
+        extra = set((gdef.get("palette") or {})) if isinstance(gdef, dict) else set()
+        allowed = {".", "o", "#"} | extra
         assert len(rows) == 16, f"glyph {name}: {len(rows)} rows"
         for i, row in enumerate(rows):
             assert len(row) == 16, f"glyph {name} row {i}: {len(row)} cols"
-            assert set(row) <= {".", "o", "#"}, f"glyph {name} row {i}: bad chars"
+            assert set(row) <= allowed, f"glyph {name} row {i}: bad chars {set(row)-allowed}"
     limits = assets["emotes"]["limits"]
     for ename, e in assets["emotes"]["emotes"].items():
         for j, keys in e["tracks"].items():

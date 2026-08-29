@@ -195,7 +195,10 @@ by a micro servo.
 
 The low-res visual language (to be developed in the simulator): a glyph set
 (~emoji-like ideograms), 2-frame emotion faces, scrolling text (5×7 font),
-meters/spinners, and a "thinking" animation family. Framebuffer, simulator,
+meters/spinners, and a "thinking" animation family. The panel is WS2812B —
+**full RGB per pixel** — so glyphs carry colour (blue rain, red heart,
+green/red yes/no, rainbow spinner); the resting face stays warm amber as
+the lamp's signature. Colour is defined per glyph in assets/glyphs.json. Framebuffer, simulator,
 and glyph tooling are all grid-size-parametric; final glyph art is baked only
 after the panel's true grid (16×16 vs 22×22) is confirmed on arrival.
 

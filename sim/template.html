@@ -427,9 +427,9 @@ function renderScene(k, proj, fb, now){
       let pix = "";
       for(let r=0;r<G2;r++) for(let c=0;c<G2;c++){
         const v = fb[r][c];
-        if(v>0){
+        if(v){
           const cx = x0 + (c+0.1)*pw/G2, cy = gy - 2 - ph*((G2-1-r)+0.1)/G2;
-          pix += `<rect x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" width="${(pw/G2*0.8).toFixed(1)}" height="${(ph/G2*0.8).toFixed(1)}" fill="var(--accent)" opacity="${(v>=0.9?0.85:0.3).toFixed(2)}"/>`;
+          pix += `<rect x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" width="${(pw/G2*0.8).toFixed(1)}" height="${(ph/G2*0.8).toFixed(1)}" fill="${v.c}" opacity="${(v.a>=0.9?0.85:0.3).toFixed(2)}"/>`;
         }
       }
       projSvg = `
@@ -457,7 +457,7 @@ function renderScene(k, proj, fb, now){
   let facePix = "";
   for(let r=0;r<G;r++) for(let c=0;c<G;c++){
     const v = fb[r][c];
-    if(v>0) facePix += `<rect x="${((c-G/2)*fs).toFixed(1)}" y="${((r-G/2)*fs).toFixed(1)}" width="${(fs*0.82).toFixed(1)}" height="${(fs*0.82).toFixed(1)}" rx="0.6" fill="#f2a33c" opacity="${v>=0.9?1:0.35}"/>`;
+    if(v) facePix += `<rect x="${((c-G/2)*fs).toFixed(1)}" y="${((r-G/2)*fs).toFixed(1)}" width="${(fs*0.82).toFixed(1)}" height="${(fs*0.82).toFixed(1)}" rx="0.6" fill="${v.c}" opacity="${v.a>=0.9?1:0.35}"/>`;
   }
   const joint = (p)=>`<circle cx="${px(p.x)}" cy="${py(p.y)}" r="10" fill="${CW.joint}" stroke="${CW.jointEdge}" stroke-width="2"/>`;
   const arm = (a,b)=>`
@@ -521,6 +521,12 @@ function renderTorque(t){
 const mcanvas = document.getElementById("matrix");
 const mctx = mcanvas.getContext("2d");
 const mcap = document.getElementById("matrixCap");
+const AMBER = "#f2a33c";
+function glyphRows(g){ return Array.isArray(g) ? g : g.rows; }
+function glyphColor(g, ch){
+  if(ch === "#" || ch === "o") return Array.isArray(g) ? AMBER : (g.color || AMBER);
+  return (!Array.isArray(g) && g.palette && g.palette[ch]) || AMBER;
+}
 let display = {kind:"face"};
 let animT0 = 0;
 let eyeOffX = 0, eyeOffY = 0;
@@ -552,33 +558,36 @@ function frameForDisplay(now){
   const G = grid;
   const fb = Array.from({length:G}, ()=>new Array(G).fill(0));
   const off = (G-16)>>1;
+  const set = (r, c, col, a)=>{ fb[r][c] = {c: col, a}; };
   if(display.kind==="face"){
     // the living resting face: big eyes with cursor-following pupils, blink, small smile
     const blink = now < blinkUntil;
     for(const ex0 of [3, 9]){
       if(blink){
-        for(let c=0;c<4;c++) fb[off+7][off+ex0+c] = 1;
+        for(let c=0;c<4;c++) set(off+7, off+ex0+c, AMBER, 1);
       } else {
-        for(let r=4;r<=8;r++) for(let c=0;c<4;c++) fb[off+r][off+ex0+c] = 0.22;
+        for(let r=4;r<=8;r++) for(let c=0;c<4;c++) set(off+r, off+ex0+c, AMBER, 0.22);
         const pr = 5 + eyeOffY, pc = ex0 + 1 + eyeOffX;
-        for(let r=0;r<2;r++) for(let c=0;c<2;c++) fb[off+pr+r][off+pc+c] = 1;
+        for(let r=0;r<2;r++) for(let c=0;c<2;c++) set(off+pr+r, off+pc+c, AMBER, 1);
       }
     }
-    // smile
-    fb[off+11][off+6]=1; fb[off+11][off+7]=1; fb[off+11][off+8]=1; fb[off+11][off+9]=1;
-    fb[off+10][off+5]=1; fb[off+10][off+10]=1;
+    for(const c of [6,7,8,9]) set(off+11, off+c, AMBER, 1);
+    set(off+10, off+5, AMBER, 1); set(off+10, off+10, AMBER, 1);
   } else if(display.kind==="glyph"){
     let g = GLYPHS[display.name];
     if(display.name==="happy" && now < blinkUntil) g = BLINK_HAPPY;
-    if(g) for(let r=0;r<16;r++) for(let c=0;c<16;c++){
-      const ch=g[r][c];
-      if(ch==="#") fb[r+off][c+off]=1; else if(ch==="o") fb[r+off][c+off]=0.35;
+    if(g){
+      const rows = glyphRows(g);
+      for(let r=0;r<16;r++) for(let c=0;c<16;c++){
+        const ch = rows[r][c];
+        if(ch !== ".") set(r+off, c+off, glyphColor(g, ch), ch==="o" ? 0.35 : 1);
+      }
     }
   } else if(display.kind==="anim" && display.name==="thinking"){
     const step = Math.floor((now-animT0)/0.38)%3;
     for(let d=0;d<3;d++){
       const col = off+3+d*5, on = d===step?1:0.3;
-      for(const r of [off+7,off+8]){ fb[r][col]=on; fb[r][col+1]=on; }
+      for(const r of [off+7,off+8]){ set(r, col, AMBER, on); set(r, col+1, AMBER, on); }
     }
   } else if(display.kind==="anim" && display.name==="spinner"){
     const step = Math.floor((now-animT0)/0.09)%12;
@@ -587,7 +596,8 @@ function frameForDisplay(now){
       const a=(i/12)*2*Math.PI - Math.PI/2;
       const r=Math.round(cy+R*Math.sin(a)), c=Math.round(cx+R*Math.cos(a));
       const age=(step-i+12)%12;
-      fb[r][c] = age===0?1: age<4? 0.45-age*0.1 : 0;
+      const amp = age===0?1: age<4? 0.45-age*0.1 : 0;
+      if(amp>0) set(r, c, `hsl(${i*30},85%,62%)`, amp);   // full-RGB rainbow
     }
   } else if(display.kind==="scroll"){
     const cols = display.cols;
@@ -598,7 +608,7 @@ function frameForDisplay(now){
       const src = pos + c;
       if(src>=0 && src<cols.length){
         const bits = cols[src];
-        for(let r=0;r<7;r++) if(bits & (1<<r)) fb[top+r][c]=1;
+        for(let r=0;r<7;r++) if(bits & (1<<r)) set(top+r, c, AMBER, 1);
       }
     }
   }
@@ -614,12 +624,12 @@ function renderMatrix(fb){
   for(let r=0;r<G;r++) for(let c=0;c<G;c++){
     const v = fb[r][c];
     const x = 1+c*cell, y = 1+r*cell, s = cell-gap;
-    if(v>=0.9){
-      mctx.save(); mctx.shadowColor="rgba(242,163,60,.9)"; mctx.shadowBlur=Math.max(6,cell*0.5);
-      mctx.fillStyle="#f2a33c"; mctx.beginPath(); mctx.roundRect(x,y,s,s,2); mctx.fill(); mctx.restore();
-    } else if(v>0){
-      mctx.fillStyle=`rgba(242,163,60,${0.15+v*0.5})`;
-      mctx.beginPath(); mctx.roundRect(x,y,s,s,2); mctx.fill();
+    if(v && v.a>=0.9){
+      mctx.save(); mctx.shadowColor=v.c; mctx.shadowBlur=Math.max(6,cell*0.5);
+      mctx.fillStyle=v.c; mctx.beginPath(); mctx.roundRect(x,y,s,s,2); mctx.fill(); mctx.restore();
+    } else if(v){
+      mctx.save(); mctx.globalAlpha = 0.15 + v.a*0.55;
+      mctx.fillStyle=v.c; mctx.beginPath(); mctx.roundRect(x,y,s,s,2); mctx.fill(); mctx.restore();
     } else {
       mctx.fillStyle="#241f18";
       mctx.beginPath(); mctx.roundRect(x,y,s,s,2); mctx.fill();
@@ -742,7 +752,7 @@ const chirpBtns = document.getElementById("chirpBtns");
 for(const name of Object.keys(CHIRPS)) mkBtn(chirpBtns, name, ()=>playChirp(name));
 const glyphBtns = document.getElementById("glyphBtns");
 const glyphBtnMap = {};
-for(const name of Object.keys(GLYPHS)) glyphBtnMap[name] = mkBtn(glyphBtns, name, ()=>{display={kind:"glyph",name}; refreshGlyphButtons();});
+for(const name of Object.keys(GLYPHS)) glyphBtnMap[name] = mkBtn(glyphBtns, name, ()=>{display={kind:"glyph",name}; displaySetAt=performance.now()/1000; refreshGlyphButtons();});
 const animBtns = document.getElementById("animBtns");
 mkBtn(animBtns, "face (live)", ()=>{ display={kind:"face"}; displaySetAt=performance.now()/1000; refreshGlyphButtons(); });
 mkBtn(animBtns, "thinking (anim)", ()=>setDisplayFromTag("@thinking"));
@@ -755,6 +765,7 @@ document.getElementById("scrollBtn").addEventListener("click", ()=>{
   const text = document.getElementById("scrollText").value || "HELLO";
   display = {kind:"scroll", text, cols: textColumns(text)};
   animT0 = performance.now()/1000;
+  displaySetAt = animT0;
   refreshGlyphButtons();
 });
 document.getElementById("gridToggle").addEventListener("click", (e)=>{
@@ -953,8 +964,13 @@ function render3D(fb){
   ctx.clearRect(0, 0, S, S);
   for(let r=0;r<G;r++) for(let c=0;c<G;c++){
     const v = fb[r][c];
-    if(v>0){ ctx.fillStyle = v>=0.9 ? "#f2a33c" : "rgba(242,163,60,0.32)"; ctx.fillRect(c*cell+1, r*cell+1, cell-2, cell-2); }
+    if(v){
+      ctx.globalAlpha = v.a>=0.9 ? 1 : 0.32;
+      ctx.fillStyle = v.c;
+      ctx.fillRect(c*cell+1, r*cell+1, cell-2, cell-2);
+    }
   }
+  ctx.globalAlpha = 1;
   T.faceTex.needsUpdate = true;
   // projection onto the ground
   const lp = new THREE.Vector3(); T.lensAnchor.getWorldPosition(lp);

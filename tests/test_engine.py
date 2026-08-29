@@ -49,10 +49,12 @@ def test_hold_emotes_settle_within_limits(assets):
 
 
 def test_glyphs_are_16x16(assets):
-    for name, rows in assets["glyphs"]["glyphs"].items():
+    for name, gdef in assets["glyphs"]["glyphs"].items():
+        rows = gdef["rows"] if isinstance(gdef, dict) else gdef
+        extra = set((gdef.get("palette") or {})) if isinstance(gdef, dict) else set()
         assert len(rows) == 16, name
         assert all(len(r) == 16 for r in rows), name
-        assert all(set(r) <= {".", "o", "#"} for r in rows), name
+        assert all(set(r) <= {".", "o", "#"} | extra for r in rows), name
 
 
 def test_emote_glyph_and_chirp_references_resolve(assets):
