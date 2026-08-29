@@ -27,7 +27,7 @@ the general gotchas below are already settled by prior art.)
 
 | Item | Pick | Price | Supplier | Notes |
 |---|---|---|---|---|
-| Head matrix | **BTF WS2812B-2427 mini flexible panel** (fine pitch) | $50.99 (~£40) | [BTF direct](https://www.btf-lighting.com/products/ws2812b-mini-led-smd-2427-digital-11x44-22x22-digital-flexible-led-panel-screen-individually-addressable-dc5v) | 1–2 wk from China. Comes as 22×22/11×44; use a 16×16 window — verify pitch/windowing on arrival. **Fallback if it disappoints:** rigid 16×16 boards on AliExpress ~£10–18, ordered later |
+| Head matrix | **BTF WS2812B-2427 mini flexible panel** (fine pitch) | $50.99 (~£40) | [BTF direct](https://www.btf-lighting.com/products/ws2812b-mini-led-smd-2427-digital-11x44-22x22-digital-flexible-led-panel-screen-individually-addressable-dc5v) | 1–2 wk from China. Comes as 22×22/11×44 — order the 22×22 and use its **full native grid** (more pixels = better; software is grid-parametric). Verify pitch/layout on arrival. **Fallback if it disappoints:** rigid 16×16 boards on AliExpress ~£10–18, ordered later |
 | Projection lens | 100 mm double-convex glass lens | £13.20 | [eBay UK "lens-store"](https://www.ebay.co.uk/sch/i.html?_nkw=100mm+biconvex+lens+condenser) | Many diameter/FL combos in stock |
 | Fresnel | A4 Fresnel page-magnifier sheet | ~£4–8 *(unverified)* | Amazon UK / [magnifyingglasses.co.uk](https://magnifyingglasses.co.uk/product-category/page-sheet-magnifiers/) | Grooved side toward the wall |
 | Diffuser | LED diffuser sheet / thin acrylic | ~£5 | Amazon UK | See optics gotcha below |

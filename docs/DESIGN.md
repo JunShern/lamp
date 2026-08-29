@@ -33,7 +33,7 @@ servo mechanics).
 | # | Decision | Choice | Notes |
 |---|----------|--------|-------|
 | D1 | Voice | **None.** Motion + projection + chirps only | Canonical Luxo behavior; removes TTS/latency pressure |
-| D2 | Display | **16×16 WS2812 matrix + projection lens**, likely final form | Head interface stays modular as cheap insurance |
+| D2 | Display | **Fine-pitch WS2812 matrix + projection lens**, likely final form. Grid = the panel's native resolution (16×16 minimum, likely 22×22) | Head interface stays modular as cheap insurance; all software resolution-parametric, glyph art finalized once the panel is verified in hand |
 | D3 | Sound | **Passive piezo**, PWM-driven chirps | No speaker, no audio DAC; "Game Boy" palette |
 | D4 | Camera | **Never in v1.** ToF depth grid + mic DOA only | Camera module possible later, with hardware shutter + power LED |
 | D5 | Power | Mains, single external 12 V PSU into the base | No battery |
@@ -185,9 +185,11 @@ by a micro servo.
 - **Also still a lamp**: a plain "all pixels warm white at safe brightness"
   mode gives real task lighting through the same lens.
 
-The 256-pixel visual language (to be developed in the simulator): a glyph
-set (~emoji-like ideograms), 2-frame emotion faces, scrolling text (5×7 font,
-~2 chars visible), meters/spinners, and a "thinking" animation family.
+The low-res visual language (to be developed in the simulator): a glyph set
+(~emoji-like ideograms), 2-frame emotion faces, scrolling text (5×7 font),
+meters/spinners, and a "thinking" animation family. Framebuffer, simulator,
+and glyph tooling are all grid-size-parametric; final glyph art is baked only
+after the panel's true grid (16×16 vs 22×22) is confirmed on arrival.
 
 ## 6. Perception & privacy
 
