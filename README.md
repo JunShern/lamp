@@ -15,7 +15,13 @@ interface.
 
 ```
 docs/       design doc, BOM, decisions
-cad/        parametric Blender (bpy) scripts + exported STLs
-sim/        desktop simulator for character/animation work
-lamp/       the Python daemon that runs on the Raspberry Pi
+assets/     emotes, glyphs, chirps (JSON) — the shared contract
+cad/        parametric Blender (bpy) model, renders, massing STLs
+sim/        browser simulator (build: python3 sim/build.py)
+lamp/       Python engine for the Raspberry Pi (validate: python3 -m lamp.validate)
+tests/      pytest suite incl. envelope sweep (python3 -m pytest tests/)
 ```
+
+The browser simulator and the Python engine implement the same spring/keyframe
+physics over the same asset files and are cross-validated against each other —
+what you tune in the simulator is what the hardware will do.
