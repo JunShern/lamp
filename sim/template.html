@@ -373,8 +373,8 @@ function renderScene(k, proj, fb){
   const headPoly = (()=>{
     const w = k.wrist, l = k.lens;
     const p = (pt)=>px(pt.x)+","+py(pt.y);
-    const a1={x:w.x+perp.x*13,y:w.y+perp.y*13}, a2={x:w.x-perp.x*13,y:w.y-perp.y*13};
-    const b1={x:l.x+perp.x*32,y:l.y+perp.y*32}, b2={x:l.x-perp.x*32,y:l.y-perp.y*32};
+    const a1={x:w.x+perp.x*14,y:w.y+perp.y*14}, a2={x:w.x-perp.x*14,y:w.y-perp.y*14};
+    const b1={x:l.x+perp.x*38,y:l.y+perp.y*38}, b2={x:l.x-perp.x*38,y:l.y-perp.y*38};
     return p(a1)+" "+p(a2)+" "+p(b2)+" "+p(b1);
   })();
   let projSvg = "";
@@ -412,8 +412,8 @@ function renderScene(k, proj, fb){
   }
   // the lamp's face: live framebuffer drawn on the shade opening (cartoon cheat)
   const G = fb.length;
-  const fs = 41/G;
-  const fx = px(k.lens.x - k.dir.x*6), fy = py(k.lens.y - k.dir.y*6);
+  const fs = 48/G;
+  const fx = px(k.lens.x - k.dir.x*8), fy = py(k.lens.y - k.dir.y*8);
   const faceRot = -((cur.j2+cur.j3+cur.j4))*0.18 + cur.j5*0.5;
   let facePix = "";
   for(let r=0;r<G;r++) for(let c=0;c<G;c++){
@@ -439,7 +439,7 @@ function renderScene(k, proj, fb){
     ${arm(k.elbow, k.wrist)}
     <g transform="rotate(${cur.j5*0.25} ${px(k.wrist.x)} ${py(k.wrist.y)})">
       <polygon points="${headPoly}" fill="var(--shell)" stroke="${ACCENT_EDGE}" stroke-width="1.6"/>
-      <line x1="${px(k.lens.x+perp.x*32)}" y1="${py(k.lens.y+perp.y*32)}" x2="${px(k.lens.x-perp.x*32)}" y2="${py(k.lens.y-perp.y*32)}" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+      <line x1="${px(k.lens.x+perp.x*38)}" y1="${py(k.lens.y+perp.y*38)}" x2="${px(k.lens.x-perp.x*38)}" y2="${py(k.lens.y-perp.y*38)}" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
       <circle cx="${px(recP.x)}" cy="${py(recP.y)}" r="2.6" fill="var(--warn)"/>
     </g>
     <g transform="translate(${fx} ${fy}) rotate(${faceRot.toFixed(1)})">
@@ -466,8 +466,9 @@ function renderTorque(t){
 const mcanvas = document.getElementById("matrix");
 const mctx = mcanvas.getContext("2d");
 const mcap = document.getElementById("matrixCap");
-let display = {kind:"glyph", name:"happy"};
+let display = {kind:"face"};
 let animT0 = 0;
+let eyeOffX = 0, eyeOffY = 0;
 const FONT57 = {
   "A":[0x7E,0x11,0x11,0x11,0x7E],"B":[0x7F,0x49,0x49,0x49,0x36],"C":[0x3E,0x41,0x41,0x41,0x22],
   "D":[0x7F,0x41,0x41,0x22,0x1C],"E":[0x7F,0x49,0x49,0x49,0x41],"F":[0x7F,0x09,0x09,0x09,0x01],
@@ -496,7 +497,22 @@ function frameForDisplay(now){
   const G = grid;
   const fb = Array.from({length:G}, ()=>new Array(G).fill(0));
   const off = (G-16)>>1;
-  if(display.kind==="glyph"){
+  if(display.kind==="face"){
+    // the living resting face: big eyes with cursor-following pupils, blink, small smile
+    const blink = now < blinkUntil;
+    for(const ex0 of [3, 9]){
+      if(blink){
+        for(let c=0;c<4;c++) fb[off+7][off+ex0+c] = 1;
+      } else {
+        for(let r=4;r<=8;r++) for(let c=0;c<4;c++) fb[off+r][off+ex0+c] = 0.22;
+        const pr = 5 + eyeOffY, pc = ex0 + 1 + eyeOffX;
+        for(let r=0;r<2;r++) for(let c=0;c<2;c++) fb[off+pr+r][off+pc+c] = 1;
+      }
+    }
+    // smile
+    fb[off+11][off+6]=1; fb[off+11][off+7]=1; fb[off+11][off+8]=1; fb[off+11][off+9]=1;
+    fb[off+10][off+5]=1; fb[off+10][off+10]=1;
+  } else if(display.kind==="glyph"){
     let g = GLYPHS[display.name];
     if(display.name==="happy" && now < blinkUntil) g = BLINK_HAPPY;
     if(g) for(let r=0;r<16;r++) for(let c=0;c<16;c++){
@@ -554,7 +570,7 @@ function renderMatrix(fb){
       mctx.beginPath(); mctx.roundRect(x,y,s,s,2); mctx.fill();
     }
   }
-  mcap.textContent = `${G}×${G} · ${display.kind==="glyph"?"glyph: "+display.name: display.kind==="anim"?"anim: "+display.name : 'scroll: "'+display.text+'"'}`;
+  mcap.textContent = `${G}×${G} · ${display.kind==="face"?"face · alive (eyes follow your cursor)": display.kind==="glyph"?"glyph: "+display.name: display.kind==="anim"?"anim: "+display.name : 'scroll: "'+display.text+'"'}`;
 }
 function setDisplayFromTag(tag){
   if(tag.startsWith("@")) { display={kind:"anim", name:tag.slice(1)}; animT0=performance.now()/1000; }
@@ -579,8 +595,8 @@ function playChirp(name){
       osc.frequency.linearRampToValueAtTime(f1, t0+s1);
       const dur = s1-s0, atk = dur*0.2, rel = dur*0.3;
       g.gain.setValueAtTime(0, t0+s0);
-      g.gain.linearRampToValueAtTime(a*0.25, t0+s0+atk);
-      g.gain.setValueAtTime(a*0.25, t0+s1-rel);
+      g.gain.linearRampToValueAtTime(a*0.17, t0+s0+atk);
+      g.gain.setValueAtTime(a*0.17, t0+s1-rel);
       g.gain.linearRampToValueAtTime(0, t0+s1);
       osc.connect(g).connect(actx.destination);
       osc.start(t0+s0); osc.stop(t0+s1+0.02);
@@ -591,7 +607,7 @@ function playChirp(name){
 // ---------- performances ----------
 const PERFORMANCES = {
   "greeting": [
-    {t:0.0, emote:"wake_stretch", glyph:"hi"},
+    {t:0.0, emote:"wave_hello", glyph:"hi"},
     {t:2.0, emote:"happy_wiggle"}
   ],
   "sunny tomorrow?": [
@@ -673,6 +689,7 @@ const glyphBtns = document.getElementById("glyphBtns");
 const glyphBtnMap = {};
 for(const name of Object.keys(GLYPHS)) glyphBtnMap[name] = mkBtn(glyphBtns, name, ()=>{display={kind:"glyph",name}; refreshGlyphButtons();});
 const animBtns = document.getElementById("animBtns");
+mkBtn(animBtns, "face (live)", ()=>{ display={kind:"face"}; displaySetAt=performance.now()/1000; refreshGlyphButtons(); });
 mkBtn(animBtns, "thinking (anim)", ()=>setDisplayFromTag("@thinking"));
 mkBtn(animBtns, "spinner (anim)", ()=>setDisplayFromTag("@spinner"));
 function refreshGlyphButtons(){
@@ -828,11 +845,16 @@ function loop(){
   if(!reduced) idleLife(now);
   // blink scheduling + face restore
   if(now > nextBlinkAt){ blinkUntil = now + 0.13; nextBlinkAt = now + 2.5 + Math.random()*4; }
-  if(display.kind==="glyph" && display.name!=="happy" && !active && !perfTimers.length &&
-     !isAsleep() && now - displaySetAt > 7){ setDisplayFromTag("happy"); }
+  if(display.kind!=="face" && !active && !perfTimers.length &&
+     !isAsleep() && now - displaySetAt > 7){ display = {kind:"face"}; refreshGlyphButtons(); }
   updatePose(now, dt);
   const k = forwardKin();
   lastK = k;
+  // pupils drift toward whatever the lamp is watching
+  if(gazeTarget){
+    eyeOffX = Math.max(-1, Math.min(1, Math.round((gazeTarget.x - k.lens.x)/250)));
+    eyeOffY = Math.max(-1, Math.min(1, Math.round(-(gazeTarget.y - k.lens.y)/250)));
+  } else { eyeOffX = 0; eyeOffY = 0; }
   const fb = frameForDisplay(now);
   renderScene(k, projection(k), fb);
   renderTorque(torques(k));

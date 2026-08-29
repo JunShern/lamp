@@ -31,9 +31,9 @@ PARAMS = {
     "base_r": 90, "base_h": 60,
     "link1": 160, "link2": 160,
     "shoulder_z": 104,                 # J2 height above ground
-    "arm_r": 13,                       # arm tube radius
-    "cap_r": 19, "cap_w": 38,          # joint cap cylinders (over servo)
-    "shade_len": 110, "shade_r0": 24, "shade_r1": 54,
+    "arm_r": 12,                       # arm tube radius
+    "cap_r": 18, "cap_w": 38,          # joint cap cylinders (over servo)
+    "shade_len": 122, "shade_r0": 24, "shade_r1": 63,
     "j2_deg": 70, "j3_deg": -50, "j4_deg": -75,   # neutral pose
 }
 
@@ -222,14 +222,22 @@ def build_lamp(colorway: str, pose=None):
     face_c = v_add(P4, v_scale(dh, P["shade_len"] - 8))
     parts["head_face"] = cyl("head_face", P["shade_r1"] - 8, 3, face_c,
                              shade_rot, m=face)
-    parts["lens"] = cyl("lens", 15, 6, v_add(face_c, v_scale(dh, 3)),
+    parts["lens"] = cyl("lens", 10, 6,
+                        v_add(v_add(face_c, v_scale(vh, -4)), v_scale(dh, 3)),
                         shade_rot, m=mat("lensglass", "0B0908", roughness=0.2))
-    # pixel dots (two eyes + smile) on the face plane, offset in (y, vh)
-    dots = [(-18, 14), (18, 14), (-14, -14), (0, -19), (14, -14)]
-    for i, (yy, vv) in enumerate(dots):
+    # pixel face on the face plane, offset in (y, vh): big eyes + small smile
+    dots = [(-20, 16, 8.5), (20, 16, 8.5),                 # big eyes
+            (-15, -18, 3.6), (0, -23, 3.6), (15, -18, 3.6)]  # smile
+    for i, (yy, vv, rr) in enumerate(dots):
         pos = v_add(v_add(face_c, (0, yy, 0)), v_scale(vh, vv))
-        parts[f"pix{i}"] = cyl(f"pix{i}", 5.0, 6.0, v_add(pos, v_scale(dh, 3.5)),
-                               shade_rot, verts=24, m=glow)
+        parts[f"pix{i}"] = cyl(f"pix{i}", rr, 6.0, v_add(pos, v_scale(dh, 3.5)),
+                               shade_rot, verts=32, m=glow)
+    # pupils on the big eyes, looking toward the viewer
+    for i, yy in enumerate((-20, 20)):
+        pos = v_add(v_add(face_c, (2, yy - 4, 0)), v_scale(vh, 13.5))
+        parts[f"pupil{i}"] = cyl(f"pupil{i}", 3.4, 7.5, v_add(pos, v_scale(dh, 4.5)),
+                                 shade_rot, verts=24,
+                                 m=mat("pupil", "1A1714", roughness=0.3))
     # ToF window on the rim (looks where the lamp looks)
     tof_pos = v_add(v_add(P4, v_scale(dh, P["shade_len"] - 12)), v_scale(vh, P["shade_r1"] - 6))
     parts["tof"] = box("tof", (14, 18, 7), tof_pos, shade_rot, m=dark, bev=1.5)
