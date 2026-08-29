@@ -46,7 +46,15 @@ servo mechanics).
 
 Open questions (fine to defer):
 
-- O1: Exact character proportions/shell aesthetic — iterate in Blender renders.
+- O1 (direction settled, colourway open): shell design language follows
+  Pollen Robotics' MicroDuck — matte pastel printed shell with **one warm
+  saturated accent** on the mechanical hero parts (joint caps, shade rim,
+  yaw disc), black reserved for optics, articulation honestly visible.
+  Candidate colourways (see cad/renders/): cream `#F7E6CB`/orange (proposed),
+  sky `#A9DBE8`/orange, graphite `#6C6A68`/yellow. A MicroDuck-style
+  **REC-tally "listening" dot** on the shade lights only when the mic is
+  live (hardwired to mic power, not software). Exact proportions still
+  iterate in Blender.
 - O2: Whether the shoulder needs spring counterbalance (decide after torque
   test on the bench; mounting bosses for a spring are designed in regardless).
 - O3: Local STT (faster-whisper on the Pi) vs. cloud STT — start local for
@@ -215,7 +223,8 @@ after the panel's true grid (16×16 vs 22×22) is confirmed on arrival.
    *transcript* is sent to the Claude API. If local STT proves too slow we
    revisit explicitly (open question O3) — it is a design change, not a knob.
 3. **Hardware mic mute** switch on the base, cutting the array's USB power.
-   Muted state shown on the display.
+   Muted state shown on the display. A REC-style tally dot on the shade is
+   hardwired to mic power: lit means listening, dark means physically off.
 4. No audio/depth recording to disk; rolling buffers only, in RAM.
 
 ## 7. Sound: the piezo chirp language
