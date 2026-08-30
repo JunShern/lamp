@@ -865,6 +865,11 @@ function initThree(){
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(7000,7000),
     new THREE.MeshStandardMaterial({color:0x57534d, roughness:.95}));
   ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scn.add(ground);
+  // wall at x=560 (single-sided: invisible when orbiting behind it)
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(7000, 1600),
+    new THREE.MeshStandardMaterial({color:0x514c45, roughness:.95}));
+  wall.rotation.y = -Math.PI/2; wall.position.set(560, 800, 0);
+  wall.receiveShadow = true; scn.add(wall);
   const M = (g, mat)=>{ const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; return m; };
   const alongX = (geo, len)=>{ geo.rotateZ(-Math.PI/2); geo.translate(len/2, 0, 0); return geo; };
   // base (static)
@@ -903,6 +908,9 @@ function initThree(){
   const patch = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
     new THREE.MeshBasicMaterial({map:faceTex, transparent:true, opacity:.9, depthWrite:false}));
   patch.rotation.x = -Math.PI/2; patchHolder.add(patch);
+  const wallPatch = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({map:faceTex, transparent:true, opacity:.9, depthWrite:false}));
+  wallPatch.rotation.y = -Math.PI/2; scn.add(wallPatch);
   const cone = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1, 32, 1, true),
     new THREE.MeshBasicMaterial({color:0xf2a33c, transparent:true, opacity:.07, depthWrite:false, side:THREE.DoubleSide}));
   scn.add(cone);
@@ -941,7 +949,7 @@ function initThree(){
   }
   let lastW = W;
   three = {renderer, scn, cam, yawG, shoulderG, elbowG, wristG, rollG, faceCanvas, faceTex,
-           patchHolder, patch, cone, lensAnchor, applyColorway,
+           patchHolder, patch, wallPatch, cone, lensAnchor, applyColorway,
            resize(){
              const w = container.clientWidth;
              if(w && w !== lastW){ lastW = w; const h = Math.round(w*430/760);
@@ -976,23 +984,38 @@ function render3D(fb){
   const lp = new THREE.Vector3(); T.lensAnchor.getWorldPosition(lp);
   const q = new THREE.Quaternion(); T.lensAnchor.getWorldQuaternion(q);
   const dir = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
-  let show = false;
-  if(dir.y < -0.08){
-    const t = (1.0 - lp.y)/dir.y;
-    if(t > 0 && t < 1500){
-      const hit = lp.clone().addScaledVector(dir, t);
-      const w = Math.min(340, 0.42*t);
-      T.patchHolder.position.set(hit.x, 1.4, hit.z);
-      T.patchHolder.rotation.y = Math.atan2(-dir.x, -dir.z) + Math.PI;
-      T.patch.scale.set(w, w, 1);
-      const mid = lp.clone().add(hit).multiplyScalar(0.5);
-      T.cone.position.copy(mid);
-      T.cone.scale.set(w*0.55, t, w*0.55);
-      T.cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir.clone().normalize());
-      show = true;
+  let showGround = false, showWall = false;
+  const beam = (hit, t, w)=>{
+    const mid = lp.clone().add(hit).multiplyScalar(0.5);
+    T.cone.position.copy(mid);
+    T.cone.scale.set(w*0.55, t, w*0.55);
+    T.cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir.clone().normalize());
+  };
+  const tGround = dir.y < -0.08 ? (1.0 - lp.y)/dir.y : Infinity;
+  const xAtGround = lp.x + (isFinite(tGround) ? tGround*dir.x : 0);
+  if(isFinite(tGround) && tGround > 0 && tGround < 1500 && xAtGround < 545){
+    const hit = lp.clone().addScaledVector(dir, tGround);
+    const w = Math.min(340, 0.42*tGround);
+    T.patchHolder.position.set(hit.x, 1.4, hit.z);
+    T.patchHolder.rotation.y = Math.atan2(-dir.x, -dir.z) + Math.PI;
+    T.patch.scale.set(w, w, 1);
+    beam(hit, tGround, w);
+    showGround = true;
+  } else if(dir.x > 0.05){
+    const t = (556 - lp.x)/dir.x;
+    const y = lp.y + t*dir.y, z = lp.z + t*dir.z;
+    if(t > 0 && t < 2200 && y > 40 && y < 1400){
+      const hit = new THREE.Vector3(556, y, z);
+      const w = Math.min(420, 0.42*t);
+      T.wallPatch.position.copy(hit);
+      T.wallPatch.scale.set(w, w, 1);
+      beam(hit, t, w);
+      showWall = true;
     }
   }
-  T.patchHolder.visible = show; T.cone.visible = show;
+  T.patchHolder.visible = showGround;
+  T.wallPatch.visible = showWall;
+  T.cone.visible = showGround || showWall;
   T.resize();
   T.renderer.render(T.scn, T.cam);
 }

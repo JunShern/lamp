@@ -37,10 +37,11 @@ PARAMS = {
     "j2_deg": 70, "j3_deg": -50, "j4_deg": -75,   # neutral pose
 }
 
+# body = base/arms/tower, shade = head cone, accent = joints/rim/disc/ring
 COLORWAYS = {
-    "cream":   {"shell": "F7E6CB", "accent": "F2A33C"},
-    "sky":     {"shell": "A9DBE8", "accent": "F2A33C"},
-    "graphite":{"shell": "6C6A68", "accent": "F5C242"},
+    "duck":    {"body": "4FB3DD", "shade": "F57F1E", "accent": "F9C623"},
+    "lavender":{"body": "A98FC9", "shade": "F9C623", "accent": "F57F1E"},
+    "cream":   {"body": "F7E6CB", "shade": "F7E6CB", "accent": "F2A33C"},
 }
 BLACK = "1A1714"
 DARK_FACE = "241F18"
@@ -152,7 +153,8 @@ def v_scale(a, s):
 
 def build_lamp(colorway: str, pose=None):
     cw = COLORWAYS[colorway]
-    shell = mat("shell", cw["shell"])
+    shell = mat("body", cw["body"])
+    shade_m = mat("shade", cw["shade"])
     accent = mat("accent", cw["accent"])
     dark = mat("dark", BLACK, roughness=0.35)
     face = mat("face", DARK_FACE)
@@ -210,11 +212,11 @@ def build_lamp(colorway: str, pose=None):
     shade_rot = (0, math.pi / 2 - ah, 0)
     shade_center = v_add(P4, v_scale(dh, P["shade_len"] / 2))
     parts["head_shade"] = cone("head_shade", P["shade_r0"], P["shade_r1"],
-                               P["shade_len"], shade_center, shade_rot, m=shell,
+                               P["shade_len"], shade_center, shade_rot, m=shade_m,
                                open_ends=True)
     # cap the narrow end behind the wrist
     parts["shade_backcap"] = cyl("shade_backcap", P["shade_r0"] - 0.5, 4,
-                                 v_add(P4, v_scale(dh, 2)), shade_rot, m=shell)
+                                 v_add(P4, v_scale(dh, 2)), shade_rot, m=shade_m)
     parts["head_rim"] = torus("head_rim", P["shade_r1"] - 1, 4.5,
                               v_add(P4, v_scale(dh, P["shade_len"] - 2)),
                               shade_rot, m=accent)
@@ -327,10 +329,10 @@ def main():
         "hero":  ((640, -560, 330), center),
         "side":  ((110, -820, 210), center),
     }
-    for colorway in ("cream", "sky", "graphite"):
+    for colorway in ("duck", "lavender", "cream"):
         scene = setup_scene()
         parts, P4, dh = build_lamp(colorway)
-        if colorway == "cream":
+        if colorway == "duck":
             for vname, (loc, tgt) in views.items():
                 cam, t = add_camera(scene, loc, tgt)
                 render(scene, RENDERS / f"lamp_{colorway}_{vname}.png")
@@ -343,11 +345,11 @@ def main():
 
     # head-up "portrait" — face visible (head tilted to horizontal)
     scene = setup_scene()
-    parts, P4, dh = build_lamp("cream", pose={"j4": -20})
+    parts, P4, dh = build_lamp("duck", pose={"j4": -20})
     face_c = v_add(P4, v_scale(dh, PARAMS["shade_len"] - 8))
     cam_pos = v_add(v_add(face_c, v_scale(dh, 330)), (0, -130, 40))
     add_camera(scene, cam_pos, face_c)
-    render(scene, RENDERS / "lamp_cream_face.png")
+    render(scene, RENDERS / "lamp_duck_face.png")
 
 
 if __name__ == "__main__":
