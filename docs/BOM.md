@@ -81,6 +81,21 @@ catch the Pimoroni restock (−£28), drop to 4 GB (fine for our workload if
 faster-whisper uses the small model; −£60 when stocked), or use any Pi 5
 already owned.
 
+## Akihabara option (researched 2026-08-31)
+
+Verified in-person alternatives while in Tokyo: **Akizuki Denshi** stocks the
+Feetech **STS3215 7.4 V / 19.5 kg·cm** (¥3,200, 13 on the Akihabara shelf,
+2F shelf 72) plus the **FE-URT-1** bus driver, 5 V/6 A bucks, piezo discs and
+JST pigtails — a same-day Phase-2 bench kit. Voltage trade-off: 7.4 V halves
+torque headroom vs the 12 V/30 kg·cm variant (validated emote peak is
+8.0 kg·cm, so choreography fits with 2.4x margin; worst-case dragged poses
+~13 kg·cm lean on the shoulder spring, O2). Don't mix variants on one bus
+rail. Skip in Japan: ToF breakouts (no Akiba retail), Pi 5 (no longer
+cheaper: ~¥33,900 ≈ £173), AC PSU bricks (100 V/Type-A — unsafe on UK 230 V
+unless labelled 100–240 V). Check shelves: Shigezone (Radio Depart 1F) for
+WS2812 matrices; Marutsu counter for ReSpeaker XVF3800 (¥9,149 warehouse).
+Vstone Robot Center and Tsukumo Robot Kingdom are both closed.
+
 ## Borrow-from list (open source prior art)
 
 - **[LeLamp](https://github.com/humancomputerlab/LeLamp)** — open-source
